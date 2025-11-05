@@ -44,6 +44,18 @@ export default function TradingPage() {
     loadOrders()
   }, [])
 
+  // BUG-004 FIX: ESC key closes modal
+  useEffect(() => {
+    const handleEscKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showOrderForm && !isPlacingOrder) {
+        setShowOrderForm(false)
+      }
+    }
+
+    document.addEventListener('keydown', handleEscKey)
+    return () => document.removeEventListener('keydown', handleEscKey)
+  }, [showOrderForm, isPlacingOrder])
+
   const loadOrders = async () => {
     try {
       const response = await tradingApi.getOrders('open')
@@ -281,11 +293,20 @@ export default function TradingPage() {
 
       {/* Order Form Modal */}
       {showOrderForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={(e) => {
+            // BUG-004 FIX: Click backdrop to close modal (unless submitting)
+            if (e.target === e.currentTarget && !isPlacingOrder) {
+              setShowOrderForm(false)
+            }
+          }}
+        >
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             className="w-full max-w-lg"
+            onClick={(e) => e.stopPropagation()}
           >
             <Card>
               <CardHeader>

@@ -21,6 +21,22 @@ export default function StrategiesPage() {
     loadStrategies()
   }, [])
 
+  // BUG-004 FIX: ESC key closes modals
+  useEffect(() => {
+    const handleEscKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        // Don't close backtest modal (it's a long-running operation)
+        // But DO close create modal
+        if (showCreateModal) {
+          setShowCreateModal(false)
+        }
+      }
+    }
+
+    document.addEventListener('keydown', handleEscKey)
+    return () => document.removeEventListener('keydown', handleEscKey)
+  }, [showCreateModal])
+
   const loadStrategies = async () => {
     try {
       const response = await strategyApi.list()
@@ -356,8 +372,16 @@ export default function StrategiesPage() {
 
       {/* Create Modal Placeholder */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-2xl m-4">
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          onClick={(e) => {
+            // BUG-004 FIX: Click backdrop to close modal
+            if (e.target === e.currentTarget) {
+              setShowCreateModal(false)
+            }
+          }}
+        >
+          <Card className="w-full max-w-2xl m-4" onClick={(e) => e.stopPropagation()}>
             <CardHeader>
               <CardTitle>Create New Strategy</CardTitle>
             </CardHeader>
