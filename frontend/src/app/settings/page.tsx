@@ -49,7 +49,29 @@ export default function SettingsPage() {
   })
 
   const [loading, setLoading] = useState(false)
+  const [initialLoading, setInitialLoading] = useState(true)
   const [saved, setSaved] = useState(false)
+
+  // Load settings on mount
+  useEffect(() => {
+    loadSettings()
+  }, [])
+
+  const loadSettings = async () => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/settings/`)
+      if (!response.ok) {
+        throw new Error('Failed to load settings')
+      }
+      const data = await response.json()
+      setSettings(data)
+    } catch (error) {
+      console.error('Failed to load settings:', error)
+      toast.error('Failed to load settings')
+    } finally {
+      setInitialLoading(false)
+    }
+  }
 
   const handleChange = (field: keyof Settings, value: any) => {
     setSettings(prev => ({ ...prev, [field]: value }))
@@ -59,11 +81,25 @@ export default function SettingsPage() {
   const handleSave = async () => {
     setLoading(true)
     try {
-      // TODO: Implement API call to save settings
-      await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate API call
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/settings/`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(settings),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to save settings')
+      }
+
       toast.success('Settings saved successfully!')
       setSaved(true)
+
+      // Reload settings to confirm persistence
+      await loadSettings()
     } catch (error) {
+      console.error('Failed to save settings:', error)
       toast.error('Failed to save settings')
     } finally {
       setLoading(false)

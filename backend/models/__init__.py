@@ -1,4 +1,5 @@
-"""Data models and schemas"""
-from .schemas import *
+"""Models package"""
 
-__all__ = ["schemas"]
+from .settings import UserSettings, SettingsStorage, settings_storage
+
+__all__ = ["UserSettings", "SettingsStorage", "settings_storage"]

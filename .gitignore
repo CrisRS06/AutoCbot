@@ -77,3 +77,11 @@ binance_trades.csv
 frontend/.next/
 frontend/next-env.d.ts
 frontend/node_modules/
+
+# Backend user data
+backend/data/user_settings.json
+
+# Test artifacts
+tests/ux/node_modules/
+tests/ux/test-results/
+tests/ux/playwright-report/
