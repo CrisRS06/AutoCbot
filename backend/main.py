@@ -40,6 +40,16 @@ async def lifespan(app: FastAPI):
 
     logger.info("🚀 Starting AutoCbot Backend...")
 
+    # Initialize database
+    logger.info("📊 Initializing database...")
+    try:
+        from database.session import init_db
+        init_db()
+        logger.info("✅ Database initialized successfully")
+    except Exception as e:
+        logger.error(f"❌ Database initialization failed: {e}")
+        raise
+
     # Initialize services
     market_data_service = MarketDataService()
     sentiment_service = SentimentService()
