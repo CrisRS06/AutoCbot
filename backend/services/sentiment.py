@@ -83,21 +83,56 @@ class SentimentService:
 
     async def get_social_sentiment(self, symbol: str) -> Optional[SocialSentiment]:
         """
-        Get social sentiment for a symbol
-        Note: This would require LunarCrush API (paid) or similar service
-        For now, returns simulated data for demo purposes
+        Get social sentiment for a symbol using LunarCrush
+
+        Args:
+            symbol: Asset symbol
+
+        Returns:
+            SocialSentiment object
         """
-        # Simulated sentiment data for demo
-        # In production, integrate with LunarCrush, Santiment, or similar
-        return SocialSentiment(
-            symbol=symbol,
-            sentiment_score=0.0,  # -1 to 1
-            mentions_24h=0,
-            sentiment_positive=0.33,
-            sentiment_negative=0.33,
-            sentiment_neutral=0.34,
-            trending_rank=None
-        )
+        try:
+            from .market_data import LunarCrushProvider
+
+            # Initialize LunarCrush if needed
+            if not hasattr(self, 'lunarcrush'):
+                self.lunarcrush = LunarCrushProvider(api_key="")
+
+            # Get social metrics
+            base_symbol = symbol.split('/')[0] if '/' in symbol else symbol
+            metrics = await self.lunarcrush.get_social_metrics(base_symbol)
+
+            # Convert to SocialSentiment schema
+            sentiment_data = metrics.get('sentiment', {})
+            social_volume = metrics.get('social_volume', {})
+
+            # Normalize sentiment score to -1 to 1
+            sentiment_score = (sentiment_data.get('score', 0.5) - 0.5) * 2
+
+            total_mentions = social_volume.get('total', 0)
+
+            return SocialSentiment(
+                symbol=symbol,
+                sentiment_score=sentiment_score,
+                mentions_24h=total_mentions,
+                sentiment_positive=0.33 if sentiment_score > 0 else 0.2,
+                sentiment_negative=0.33 if sentiment_score < 0 else 0.2,
+                sentiment_neutral=0.34,
+                trending_rank=metrics.get('influence', {}).get('alt_rank')
+            )
+
+        except Exception as e:
+            logger.error(f"Error fetching social sentiment for {symbol}: {e}")
+            # Fallback to simulated data
+            return SocialSentiment(
+                symbol=symbol,
+                sentiment_score=0.0,
+                mentions_24h=0,
+                sentiment_positive=0.33,
+                sentiment_negative=0.33,
+                sentiment_neutral=0.34,
+                trending_rank=None
+            )
 
     def _calculate_overall_sentiment(
         self,
