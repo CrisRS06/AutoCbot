@@ -24,6 +24,11 @@ export default function TradingPage() {
   const [loading, setLoading] = useState(true)
   const [showOrderForm, setShowOrderForm] = useState(false)
 
+  // Loading states for money operations (BUG-002 FIX)
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false)
+  const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null)
+  const [isClosingAll, setIsClosingAll] = useState(false)
+
   // Order form state
   const [orderForm, setOrderForm] = useState({
     symbol: 'BTC/USDT',
@@ -51,6 +56,7 @@ export default function TradingPage() {
   }
 
   const handlePlaceOrder = async () => {
+    setIsPlacingOrder(true)
     try {
       const orderData = {
         symbol: orderForm.symbol,
@@ -77,28 +83,36 @@ export default function TradingPage() {
       loadOrders()
     } catch (error) {
       toast.error('Failed to place order')
+    } finally {
+      setIsPlacingOrder(false)
     }
   }
 
   const handleCancelOrder = async (orderId: string) => {
+    setCancellingOrderId(orderId)
     try {
       await tradingApi.cancelOrder(orderId)
       toast.success('Order cancelled')
       loadOrders()
     } catch (error) {
       toast.error('Failed to cancel order')
+    } finally {
+      setCancellingOrderId(null)
     }
   }
 
   const handleCloseAll = async () => {
     if (!confirm('Are you sure you want to close ALL positions?')) return
 
+    setIsClosingAll(true)
     try {
       await tradingApi.closeAllPositions()
       toast.success('All positions closed')
       loadOrders()
     } catch (error) {
       toast.error('Failed to close positions')
+    } finally {
+      setIsClosingAll(false)
     }
   }
 
@@ -119,9 +133,10 @@ export default function TradingPage() {
         <div className="flex gap-3">
           <button
             onClick={handleCloseAll}
-            className="px-4 py-2 bg-danger/10 text-danger rounded-lg hover:bg-danger/20"
+            disabled={isClosingAll}
+            className="px-4 py-2 bg-danger/10 text-danger rounded-lg hover:bg-danger/20 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Close All Positions
+            {isClosingAll ? 'Closing Positions...' : 'Close All Positions'}
           </button>
           <button
             onClick={() => setShowOrderForm(true)}
@@ -246,9 +261,15 @@ export default function TradingPage() {
                     </div>
                     <button
                       onClick={() => handleCancelOrder(order.id)}
-                      className="p-2 text-danger hover:bg-danger/10 rounded-lg"
+                      disabled={cancellingOrderId === order.id}
+                      className="p-2 text-danger hover:bg-danger/10 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                      title={cancellingOrderId === order.id ? 'Cancelling...' : 'Cancel order'}
                     >
-                      <X className="w-4 h-4" />
+                      {cancellingOrderId === order.id ? (
+                        <div className="w-4 h-4 border-2 border-danger border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <X className="w-4 h-4" />
+                      )}
                     </button>
                   </div>
                 </div>
@@ -418,20 +439,27 @@ export default function TradingPage() {
                 <div className="flex gap-3 pt-2">
                   <button
                     onClick={() => setShowOrderForm(false)}
-                    className="flex-1 px-4 py-2 border border-border rounded-lg hover:bg-accent"
+                    disabled={isPlacingOrder}
+                    className="flex-1 px-4 py-2 border border-border rounded-lg hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handlePlaceOrder}
-                    disabled={!orderForm.amount}
+                    disabled={!orderForm.amount || isPlacingOrder}
                     className={`flex-1 px-4 py-2 rounded-lg font-medium ${
                       orderForm.side === 'buy'
                         ? 'bg-success text-white hover:bg-success/90'
                         : 'bg-danger text-white hover:bg-danger/90'
-                    } disabled:opacity-50`}
+                    } disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
                   >
-                    Place {orderForm.side.toUpperCase()} Order
+                    {isPlacingOrder && (
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    )}
+                    {isPlacingOrder
+                      ? `Placing ${orderForm.side.toUpperCase()} Order...`
+                      : `Place ${orderForm.side.toUpperCase()} Order`
+                    }
                   </button>
                 </div>
               </CardContent>
