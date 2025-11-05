@@ -90,3 +90,5 @@ backend/autocbot.db
 tests/ux/node_modules/
 tests/ux/test-results/
 tests/ux/playwright-report/
+tests/ux/test-results.json
+tests/ux/*.json
