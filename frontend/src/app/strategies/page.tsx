@@ -24,6 +24,10 @@ export default function StrategiesPage() {
   const [backtestResults, setBacktestResults] = useState<any>(null)
   const [showBacktestResults, setShowBacktestResults] = useState(false)
 
+  // Loading states for individual strategy actions
+  const [togglingStrategy, setTogglingStrategy] = useState<string | null>(null)
+  const [deletingStrategy, setDeletingStrategy] = useState<string | null>(null)
+
   useEffect(() => {
     loadStrategies()
   }, [])
@@ -58,24 +62,30 @@ export default function StrategiesPage() {
   }
 
   const handleToggle = async (name: string) => {
+    setTogglingStrategy(name)
     try {
       await strategyApi.toggle(name)
       toast.success('Strategy updated')
       loadStrategies()
     } catch (error) {
       toast.error('Failed to toggle strategy')
+    } finally {
+      setTogglingStrategy(null)
     }
   }
 
   const handleDelete = async (name: string) => {
     if (!confirm(`Are you sure you want to delete strategy "${name}"?`)) return
 
+    setDeletingStrategy(name)
     try {
       await strategyApi.delete(name)
       toast.success('Strategy deleted')
       loadStrategies()
     } catch (error) {
       toast.error('Failed to delete strategy')
+    } finally {
+      setDeletingStrategy(null)
     }
   }
 
@@ -274,13 +284,19 @@ export default function StrategiesPage() {
                   <div className="flex gap-2 pt-2">
                     <button
                       onClick={() => handleToggle(strategy.name)}
-                      className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      disabled={togglingStrategy === strategy.name}
+                      className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                         strategy.enabled
                           ? 'bg-warning/10 text-warning hover:bg-warning/20'
                           : 'bg-success/10 text-success hover:bg-success/20'
                       }`}
                     >
-                      {strategy.enabled ? (
+                      {togglingStrategy === strategy.name ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                          Updating...
+                        </>
+                      ) : strategy.enabled ? (
                         <>
                           <Pause className="w-4 h-4" />
                           Pause
@@ -306,10 +322,15 @@ export default function StrategiesPage() {
                     </button>
                     <button
                       onClick={() => handleDelete(strategy.name)}
-                      className="px-3 py-2 bg-danger/10 text-danger rounded-lg hover:bg-danger/20 transition-colors"
-                      title="Delete Strategy"
+                      disabled={deletingStrategy === strategy.name}
+                      className="px-3 py-2 bg-danger/10 text-danger rounded-lg hover:bg-danger/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title={deletingStrategy === strategy.name ? 'Deleting...' : 'Delete Strategy'}
                     >
-                      <Trash2 className="w-4 h-4" />
+                      {deletingStrategy === strategy.name ? (
+                        <div className="w-4 h-4 border-2 border-danger border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <Trash2 className="w-4 h-4" />
+                      )}
                     </button>
                   </div>
                 </CardContent>
