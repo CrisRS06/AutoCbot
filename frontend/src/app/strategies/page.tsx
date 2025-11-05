@@ -13,6 +13,10 @@ export default function StrategiesPage() {
   const [loading, setLoading] = useState(true)
   const [showCreateModal, setShowCreateModal] = useState(false)
 
+  // BUG-003 FIX: Loading state for long-running backtest operations
+  const [backtestingStrategy, setBacktestingStrategy] = useState<string | null>(null)
+  const [backtestProgress, setBacktestProgress] = useState<string>('')
+
   useEffect(() => {
     loadStrategies()
   }, [])
@@ -52,20 +56,40 @@ export default function StrategiesPage() {
   }
 
   const handleBacktest = async (name: string) => {
+    setBacktestingStrategy(name)
+    setBacktestProgress('Initializing backtest...')
+
     try {
-      toast.loading('Running backtest...')
+      // Simulate progress updates for better UX
+      const progressInterval = setInterval(() => {
+        setBacktestProgress(prev => {
+          const messages = [
+            'Loading historical data...',
+            'Analyzing price patterns...',
+            'Running strategy signals...',
+            'Calculating performance metrics...',
+            'Finalizing results...',
+          ]
+          const currentIndex = messages.indexOf(prev)
+          return messages[(currentIndex + 1) % messages.length]
+        })
+      }, 5000)
+
       const response = await strategyApi.runBacktest({
         strategy_name: name,
         pairs: ['BTC/USDT'],
         start_date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
         end_date: new Date().toISOString(),
       })
-      toast.dismiss()
+
+      clearInterval(progressInterval)
       toast.success('Backtest completed!')
       // TODO: Show backtest results
     } catch (error) {
-      toast.dismiss()
       toast.error('Backtest failed')
+    } finally {
+      setBacktestingStrategy(null)
+      setBacktestProgress('')
     }
   }
 
@@ -213,10 +237,15 @@ export default function StrategiesPage() {
                     </button>
                     <button
                       onClick={() => handleBacktest(strategy.name)}
-                      className="px-3 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
-                      title="Run Backtest"
+                      disabled={backtestingStrategy === strategy.name}
+                      className="px-3 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title={backtestingStrategy === strategy.name ? 'Running backtest...' : 'Run Backtest'}
                     >
-                      <BarChart3 className="w-4 h-4" />
+                      {backtestingStrategy === strategy.name ? (
+                        <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <BarChart3 className="w-4 h-4" />
+                      )}
                     </button>
                     <button
                       onClick={() => handleDelete(strategy.name)}
@@ -292,6 +321,38 @@ export default function StrategiesPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Backtest Progress Modal (BUG-003 FIX) */}
+      {backtestingStrategy && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full max-w-md m-4"
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-3">
+                  <div className="w-6 h-6 border-3 border-primary border-t-transparent rounded-full animate-spin" />
+                  Running Backtest
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <p className="font-semibold mb-1">{backtestingStrategy}</p>
+                  <p className="text-sm text-muted-foreground">{backtestProgress}</p>
+                </div>
+                <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                  <div className="h-full bg-primary rounded-full animate-pulse" style={{ width: '60%' }} />
+                </div>
+                <p className="text-xs text-muted-foreground text-center">
+                  This may take 30-60 seconds. Please wait...
+                </p>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
+      )}
 
       {/* Create Modal Placeholder */}
       {showCreateModal && (
