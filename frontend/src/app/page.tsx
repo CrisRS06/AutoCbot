@@ -11,6 +11,7 @@ import PortfolioSummaryCard from '@/components/dashboard/PortfolioSummaryCard'
 import PositionsTable from '@/components/dashboard/PositionsTable'
 import { marketApi, sentimentApi, tradingApi, portfolioApi } from '@/services/api'
 import type { MarketOverview, FearGreedIndex, TradingSignal, PortfolioSummary, Position } from '@/types'
+import toast from 'react-hot-toast'
 
 export default function DashboardPage() {
   const [marketOverview, setMarketOverview] = useState<MarketOverview | null>(null)
@@ -44,6 +45,8 @@ export default function DashboardPage() {
       setPositions(positionsRes.data)
     } catch (error) {
       console.error('Failed to load dashboard data:', error)
+      // BUG-005 FIX: Show user-facing error message
+      toast.error('Failed to load dashboard data. Please check your connection.')
     } finally {
       setLoading(false)
     }

@@ -72,3 +72,16 @@ repo_gitdir/
 # Tax Reports
 tax_report_*.csv
 binance_trades.csv
+
+# Frontend build artifacts
+frontend/.next/
+frontend/next-env.d.ts
+frontend/node_modules/
+
+# Backend user data
+backend/data/user_settings.json
+
+# Test artifacts
+tests/ux/node_modules/
+tests/ux/test-results/
+tests/ux/playwright-report/
