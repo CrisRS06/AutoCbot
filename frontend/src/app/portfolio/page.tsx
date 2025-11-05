@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Wallet, TrendingUp, TrendingDown, PieChart, Clock, DollarSign } from 'lucide-react'
+import DashboardLayout from '@/components/layout/DashboardLayout'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
 import { portfolioApi } from '@/services/api'
 import { formatCurrency, formatPercent, getChangeColor } from '@/lib/utils'
@@ -44,19 +45,20 @@ export default function PortfolioPage() {
   const totalPnLPercent = summary?.pnl_percentage || 0
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between"
-      >
-        <div>
-          <h1 className="text-4xl font-bold text-gradient">Portfolio</h1>
-          <p className="text-muted-foreground mt-1">
-            Track your holdings and performance
-          </p>
-        </div>
+    <DashboardLayout>
+      <div className="space-y-6 p-6">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center justify-between"
+        >
+          <div>
+            <h1 className="text-4xl font-bold text-gradient">Portfolio</h1>
+            <p className="text-muted-foreground mt-1">
+              Track your holdings and performance
+            </p>
+          </div>
         <div className="flex gap-2">
           {[7, 30, 90].map(days => (
             <button
@@ -276,6 +278,7 @@ export default function PortfolioPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </DashboardLayout>
   )
 }

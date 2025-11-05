@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Activity, Plus, Play, Pause, Trash2, BarChart3, TrendingUp } from 'lucide-react'
+import DashboardLayout from '@/components/layout/DashboardLayout'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
 import { strategyApi } from '@/services/api'
 import type { StrategyConfig } from '@/types'
@@ -110,19 +111,20 @@ export default function StrategiesPage() {
   }
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between"
-      >
-        <div>
-          <h1 className="text-4xl font-bold text-gradient">Strategies</h1>
-          <p className="text-muted-foreground mt-1">
-            Manage and test your trading strategies
-          </p>
-        </div>
+    <DashboardLayout>
+      <div className="space-y-6 p-6">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center justify-between"
+        >
+          <div>
+            <h1 className="text-4xl font-bold text-gradient">Strategies</h1>
+            <p className="text-muted-foreground mt-1">
+              Manage and test your trading strategies
+            </p>
+          </div>
         <button
           onClick={() => setShowCreateModal(true)}
           className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
@@ -399,6 +401,7 @@ export default function StrategiesPage() {
           </Card>
         </div>
       )}
-    </div>
+      </div>
+    </DashboardLayout>
   )
 }

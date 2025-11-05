@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Save, Key, DollarSign, Shield, Bell, Database } from 'lucide-react'
+import DashboardLayout from '@/components/layout/DashboardLayout'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
 import toast from 'react-hot-toast'
 
@@ -107,19 +108,20 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between"
-      >
-        <div>
-          <h1 className="text-4xl font-bold text-gradient">Settings</h1>
-          <p className="text-muted-foreground mt-1">
-            Configure your trading bot parameters and API keys
-          </p>
-        </div>
+    <DashboardLayout>
+      <div className="space-y-6 p-6">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center justify-between"
+        >
+          <div>
+            <h1 className="text-4xl font-bold text-gradient">Settings</h1>
+            <p className="text-muted-foreground mt-1">
+              Configure your trading bot parameters and API keys
+            </p>
+          </div>
         <button
           onClick={handleSave}
           disabled={loading || saved}
@@ -389,6 +391,7 @@ export default function SettingsPage() {
           </div>
         </motion.div>
       )}
-    </div>
+      </div>
+    </DashboardLayout>
   )
 }

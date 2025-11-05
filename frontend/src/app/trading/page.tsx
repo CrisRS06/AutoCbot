@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { TrendingUp, TrendingDown, X, DollarSign, Percent, AlertTriangle } from 'lucide-react'
+import DashboardLayout from '@/components/layout/DashboardLayout'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
 import { tradingApi, marketApi } from '@/services/api'
 import { formatCurrency, formatPercent } from '@/lib/utils'
@@ -131,19 +132,20 @@ export default function TradingPage() {
   }
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between"
-      >
-        <div>
-          <h1 className="text-4xl font-bold text-gradient">Manual Trading</h1>
-          <p className="text-muted-foreground mt-1">
-            Place orders and manage your trades
-          </p>
-        </div>
+    <DashboardLayout>
+      <div className="space-y-6 p-6">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center justify-between"
+        >
+          <div>
+            <h1 className="text-4xl font-bold text-gradient">Manual Trading</h1>
+            <p className="text-muted-foreground mt-1">
+              Place orders and manage your trades
+            </p>
+          </div>
         <div className="flex gap-3">
           <button
             onClick={handleCloseAll}
@@ -490,6 +492,7 @@ export default function TradingPage() {
           </motion.div>
         </div>
       )}
-    </div>
+      </div>
+    </DashboardLayout>
   )
 }

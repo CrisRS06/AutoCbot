@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { BarChart3, TrendingUp, Target, Activity, Award, Calendar } from 'lucide-react'
+import DashboardLayout from '@/components/layout/DashboardLayout'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
 import { portfolioApi } from '@/services/api'
 import { formatCurrency, formatPercent, getChangeColor } from '@/lib/utils'
@@ -62,21 +63,24 @@ export default function AnalyticsPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6 p-6">
-        <div className="animate-pulse">
-          <div className="h-12 bg-muted rounded w-1/3 mb-6" />
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[1, 2, 3, 4, 5, 6].map(i => (
-              <div key={i} className="h-32 bg-muted rounded" />
-            ))}
+      <DashboardLayout>
+        <div className="space-y-6 p-6">
+          <div className="animate-pulse">
+            <div className="h-12 bg-muted rounded w-1/3 mb-6" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[1, 2, 3, 4, 5, 6].map(i => (
+                <div key={i} className="h-32 bg-muted rounded" />
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      </DashboardLayout>
     )
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <DashboardLayout>
+      <div className="space-y-6 p-6">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -360,6 +364,7 @@ export default function AnalyticsPage() {
           </div>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </DashboardLayout>
   )
 }
