@@ -72,3 +72,8 @@ repo_gitdir/
 # Tax Reports
 tax_report_*.csv
 binance_trades.csv
+
+# Frontend build artifacts
+frontend/.next/
+frontend/next-env.d.ts
+frontend/node_modules/
