@@ -3,7 +3,8 @@ Configuration management for AutoCbot
 """
 
 from pydantic_settings import BaseSettings
-from typing import List
+from pydantic import field_validator
+from typing import List, Union
 import os
 from dotenv import load_dotenv
 
@@ -19,7 +20,15 @@ class Settings(BaseSettings):
     DEBUG: bool = True
 
     # CORS
-    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:3001"]
+    CORS_ORIGINS: Union[List[str], str] = ["http://localhost:3000", "http://localhost:3001"]
+
+    @field_validator('CORS_ORIGINS', mode='before')
+    @classmethod
+    def parse_cors_origins(cls, v):
+        """Parse CORS_ORIGINS from comma-separated string or list"""
+        if isinstance(v, str):
+            return [origin.strip() for origin in v.split(',') if origin.strip()]
+        return v
 
     # Database
     DATABASE_URL: str = "sqlite:///./autocbot.db"
@@ -38,8 +47,16 @@ class Settings(BaseSettings):
     USE_LUNARCRUSH: bool = False  # Requires paid plan
 
     # Trading Configuration
-    DEFAULT_PAIRS: List[str] = ["BTC/USDT", "ETH/USDT", "BNB/USDT", "SOL/USDT"]
+    DEFAULT_PAIRS: Union[List[str], str] = ["BTC/USDT", "ETH/USDT", "BNB/USDT", "SOL/USDT"]
     DEFAULT_TIMEFRAME: str = "5m"
+
+    @field_validator('DEFAULT_PAIRS', mode='before')
+    @classmethod
+    def parse_default_pairs(cls, v):
+        """Parse DEFAULT_PAIRS from comma-separated string or list"""
+        if isinstance(v, str):
+            return [pair.strip() for pair in v.split(',') if pair.strip()]
+        return v
 
     # Cache Settings
     CACHE_TTL: int = 60  # seconds
@@ -60,6 +77,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = True
+        extra = "ignore"  # Ignore extra fields from .env (e.g., Freqtrade vars)
 
 
 settings = Settings()
