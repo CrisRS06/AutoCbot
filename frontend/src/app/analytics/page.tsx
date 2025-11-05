@@ -6,6 +6,7 @@ import { BarChart3, TrendingUp, Target, Activity, Award, Calendar } from 'lucide
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
 import { portfolioApi } from '@/services/api'
 import { formatCurrency, formatPercent, getChangeColor } from '@/lib/utils'
+import toast from 'react-hot-toast'
 
 interface PerformanceMetrics {
   total_trades: number
@@ -37,6 +38,8 @@ export default function AnalyticsPage() {
       setMetrics(response.data)
     } catch (error) {
       console.error('Failed to load analytics:', error)
+      // BUG-005 FIX: Show user-facing error message
+      toast.error('Failed to load analytics data. Showing demo data.')
       // Set mock data for demo
       setMetrics({
         total_trades: 45,

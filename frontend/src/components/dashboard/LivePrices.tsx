@@ -8,6 +8,7 @@ import { formatCurrency, formatPercent, getChangeColor } from '@/lib/utils'
 import { marketApi } from '@/services/api'
 import { useWebSocket } from '@/hooks/useWebSocket'
 import type { MarketPrice } from '@/types'
+import toast from 'react-hot-toast'
 
 const DEFAULT_PAIRS = ['BTC/USDT', 'ETH/USDT', 'BNB/USDT', 'SOL/USDT', 'XRP/USDT', 'ADA/USDT']
 
@@ -33,6 +34,10 @@ export default function LivePrices() {
       setPrices(response.data)
     } catch (error) {
       console.error('Failed to load prices:', error)
+      // BUG-005 FIX: Show user-facing error message (only once, not on every retry)
+      if (prices.length === 0) {
+        toast.error('Failed to load live prices. Retrying...')
+      }
     }
   }
 

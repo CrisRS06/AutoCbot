@@ -7,6 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
 import { portfolioApi } from '@/services/api'
 import { formatCurrency, formatPercent, getChangeColor } from '@/lib/utils'
 import type { Position, PortfolioSummary } from '@/types'
+import toast from 'react-hot-toast'
 
 export default function PortfolioPage() {
   const [summary, setSummary] = useState<PortfolioSummary | null>(null)
@@ -32,6 +33,8 @@ export default function PortfolioPage() {
       setHistory(historyRes.data)
     } catch (error) {
       console.error('Failed to load portfolio:', error)
+      // BUG-005 FIX: Show user-facing error message
+      toast.error('Failed to load portfolio data. Please check your connection.')
     } finally {
       setLoading(false)
     }

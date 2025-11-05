@@ -62,6 +62,8 @@ export default function TradingPage() {
       setOrders(response.data)
     } catch (error) {
       console.error('Failed to load orders:', error)
+      // BUG-005 FIX: Show user-facing error message
+      toast.error('Failed to load orders. Please check your connection.')
     } finally {
       setLoading(false)
     }
