@@ -97,3 +97,18 @@ async def get_backtest_results(limit: int = 10, db: Session = Depends(get_db)):
         return results
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/backtest/{backtest_id}")
+async def get_backtest_details(backtest_id: int, db: Session = Depends(get_db)):
+    """Get detailed backtest result by ID"""
+    try:
+        backtest_service = BacktestingService(db=db)
+        result = await backtest_service.get_backtest_by_id(backtest_id)
+        if not result:
+            raise HTTPException(status_code=404, detail="Backtest not found")
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

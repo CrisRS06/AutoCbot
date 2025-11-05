@@ -2,41 +2,48 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Activity, Plus, Play, Pause, Trash2, BarChart3, TrendingUp } from 'lucide-react'
+import { Activity, Plus, Play, Pause, Trash2, BarChart3, TrendingUp, X } from 'lucide-react'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
+import BacktestResults from '@/components/BacktestResults'
+import EquityCurveChart from '@/components/EquityCurveChart'
+import TradesTable from '@/components/TradesTable'
 import { strategyApi } from '@/services/api'
 import type { StrategyConfig } from '@/types'
 import toast from 'react-hot-toast'
+import axios from 'axios'
 
 export default function StrategiesPage() {
   const [strategies, setStrategies] = useState<StrategyConfig[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateModal, setShowCreateModal] = useState(false)
 
-  // BUG-003 FIX: Loading state for long-running backtest operations
+  // Backtest state
   const [backtestingStrategy, setBacktestingStrategy] = useState<string | null>(null)
   const [backtestProgress, setBacktestProgress] = useState<string>('')
+  const [backtestResults, setBacktestResults] = useState<any>(null)
+  const [showBacktestResults, setShowBacktestResults] = useState(false)
 
   useEffect(() => {
     loadStrategies()
   }, [])
 
-  // BUG-004 FIX: ESC key closes modals
+  // ESC key closes modals
   useEffect(() => {
     const handleEscKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        // Don't close backtest modal (it's a long-running operation)
-        // But DO close create modal
         if (showCreateModal) {
           setShowCreateModal(false)
+        }
+        if (showBacktestResults && !backtestingStrategy) {
+          setShowBacktestResults(false)
         }
       }
     }
 
     document.addEventListener('keydown', handleEscKey)
     return () => document.removeEventListener('keydown', handleEscKey)
-  }, [showCreateModal])
+  }, [showCreateModal, showBacktestResults, backtestingStrategy])
 
   const loadStrategies = async () => {
     try {
@@ -75,6 +82,7 @@ export default function StrategiesPage() {
   const handleBacktest = async (name: string) => {
     setBacktestingStrategy(name)
     setBacktestProgress('Initializing backtest...')
+    setBacktestResults(null)
 
     try {
       // Simulate progress updates for better UX
@@ -82,15 +90,16 @@ export default function StrategiesPage() {
         setBacktestProgress(prev => {
           const messages = [
             'Loading historical data...',
-            'Analyzing price patterns...',
-            'Running strategy signals...',
+            'Calculating technical indicators...',
+            'Generating trading signals...',
+            'Simulating trade execution...',
             'Calculating performance metrics...',
             'Finalizing results...',
           ]
           const currentIndex = messages.indexOf(prev)
           return messages[(currentIndex + 1) % messages.length]
         })
-      }, 5000)
+      }, 3000)
 
       const response = await strategyApi.runBacktest({
         strategy_name: name,
@@ -100,10 +109,40 @@ export default function StrategiesPage() {
       })
 
       clearInterval(progressInterval)
-      toast.success('Backtest completed!')
-      // TODO: Show backtest results
-    } catch (error) {
-      toast.error('Backtest failed')
+
+      // Fetch detailed results from backtest
+      // Get the latest backtest result for this strategy
+      const resultsResponse = await axios.get(
+        `http://localhost:8000/api/v1/strategies/backtest/results?limit=1`
+      )
+
+      if (resultsResponse.data && resultsResponse.data.length > 0) {
+        const latestResult = resultsResponse.data[0]
+
+        // Fetch full details with equity curve and trades
+        const detailsResponse = await axios.get(
+          `http://localhost:8000/api/v1/backtest/${latestResult.id}`
+        )
+
+        setBacktestResults({
+          strategy: name,
+          metrics: detailsResponse.data.metrics || {},
+          equityCurve: detailsResponse.data.equity_curve || [],
+          trades: detailsResponse.data.trades || [],
+          startDate: detailsResponse.data.start_date,
+          endDate: detailsResponse.data.end_date,
+          initialCapital: detailsResponse.data.initial_capital,
+        })
+
+        setShowBacktestResults(true)
+        toast.success('Backtest completed successfully!')
+      } else {
+        toast.success('Backtest completed!')
+      }
+
+    } catch (error: any) {
+      console.error('Backtest error:', error)
+      toast.error(error.response?.data?.detail || 'Backtest failed')
     } finally {
       setBacktestingStrategy(null)
       setBacktestProgress('')
@@ -340,7 +379,7 @@ export default function StrategiesPage() {
         </Card>
       </div>
 
-      {/* Backtest Progress Modal (BUG-003 FIX) */}
+      {/* Backtest Progress Modal */}
       {backtestingStrategy && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <motion.div
@@ -372,12 +411,68 @@ export default function StrategiesPage() {
         </div>
       )}
 
+      {/* Backtest Results Modal */}
+      {showBacktestResults && backtestResults && (
+        <div
+          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 overflow-y-auto"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowBacktestResults(false)
+            }
+          }}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full max-w-7xl my-8"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-2xl">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                <h2 className="text-2xl font-bold">Backtest Results</h2>
+                <button
+                  onClick={() => setShowBacktestResults(false)}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-6 space-y-8 max-h-[calc(100vh-200px)] overflow-y-auto">
+                {/* Metrics Summary */}
+                <BacktestResults
+                  metrics={backtestResults.metrics}
+                  strategyName={backtestResults.strategy}
+                  startDate={backtestResults.startDate}
+                  endDate={backtestResults.endDate}
+                  initialCapital={backtestResults.initialCapital}
+                />
+
+                {/* Equity Curve */}
+                {backtestResults.equityCurve && backtestResults.equityCurve.length > 0 && (
+                  <EquityCurveChart
+                    equityCurve={backtestResults.equityCurve}
+                    initialCapital={backtestResults.initialCapital}
+                  />
+                )}
+
+                {/* Trades Table */}
+                {backtestResults.trades && backtestResults.trades.length > 0 && (
+                  <TradesTable trades={backtestResults.trades} />
+                )}
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
       {/* Create Modal Placeholder */}
       {showCreateModal && (
         <div
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
           onClick={(e) => {
-            // BUG-004 FIX: Click backdrop to close modal
             if (e.target === e.currentTarget) {
               setShowCreateModal(false)
             }
