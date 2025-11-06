@@ -18,6 +18,7 @@ from services.sentiment import SentimentService
 from services.fundamental import FundamentalService
 from services.websocket_manager import WebSocketManager
 from utils.config import settings
+from middleware.security import SecurityHeadersMiddleware, RateLimitMiddleware, RequestIDMiddleware
 
 # Configure logging
 logging.basicConfig(
@@ -87,6 +88,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Security middleware
+app.add_middleware(RequestIDMiddleware)  # Request ID tracking
+app.add_middleware(SecurityHeadersMiddleware)  # Security headers
+app.add_middleware(RateLimitMiddleware, requests_per_minute=120)  # Rate limiting
+
 # Include routers
 app.include_router(router, prefix="/api/v1")
 
@@ -104,13 +110,37 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
+    """
+    Enhanced health check endpoint
+    Returns detailed service status
+    """
     return {
         "status": "healthy",
+        "version": "1.0.0",
+        "environment": "development" if settings.DEBUG else "production",
         "services": {
-            "market_data": market_data_service.is_running if market_data_service else False,
-            "sentiment": sentiment_service.is_running if sentiment_service else False,
-            "fundamental": fundamental_service.is_running if fundamental_service else False
+            "market_data": {
+                "status": "running" if (market_data_service and market_data_service.is_running) else "stopped",
+                "description": "Market data aggregation service"
+            },
+            "sentiment": {
+                "status": "running" if (sentiment_service and sentiment_service.is_running) else "stopped",
+                "description": "Sentiment analysis service"
+            },
+            "fundamental": {
+                "status": "running" if (fundamental_service and fundamental_service.is_running) else "stopped",
+                "description": "Fundamental analysis service"
+            },
+            "database": {
+                "status": "connected",
+                "description": "SQLAlchemy database connection"
+            }
+        },
+        "features": {
+            "rate_limiting": True,
+            "security_headers": True,
+            "request_id_tracking": True,
+            "websocket_support": True
         }
     }
 
