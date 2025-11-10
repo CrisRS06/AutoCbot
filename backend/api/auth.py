@@ -2,7 +2,7 @@
 Authentication API endpoints
 Handles user registration, login, token refresh, and user management
 """
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr
@@ -21,6 +21,7 @@ from utils.auth import (
     verify_token
 )
 from utils.config import settings
+from utils.rate_limit import auth_rate_limit, auth_strict_rate_limit, limiter
 
 router = APIRouter(tags=["authentication"])
 security = HTTPBearer()
@@ -74,7 +75,8 @@ class MessageResponse(BaseModel):
 # ========== Endpoints ==========
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def register(user_data: UserRegister, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")  # Rate limit: 5 registration attempts per minute
+async def register(request: Request, user_data: UserRegister, db: Session = Depends(get_db)):
     """
     Register a new user account
 
@@ -116,7 +118,8 @@ async def register(user_data: UserRegister, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(user_data: UserLogin, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")  # Rate limit: 5 login attempts per minute (anti-brute-force)
+async def login(request: Request, user_data: UserLogin, db: Session = Depends(get_db)):
     """
     Login and receive access and refresh tokens
 
@@ -159,7 +162,8 @@ async def login(user_data: UserLogin, db: Session = Depends(get_db)):
 
 
 @router.post("/refresh", response_model=TokenResponse)
-async def refresh_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+@limiter.limit("10/minute")  # Rate limit: 10 token refresh attempts per minute
+async def refresh_token(request: Request, credentials: HTTPAuthorizationCredentials = Depends(security)):
     """
     Refresh access token using refresh token
 
@@ -256,7 +260,9 @@ async def logout(
 
 
 @router.put("/change-password", response_model=MessageResponse)
+@limiter.limit("3/minute")  # Rate limit: 3 password change attempts per minute (strict)
 async def change_password(
+    request: Request,
     current_password: str,
     new_password: str,
     current_user: User = Depends(get_current_user),
