@@ -17,11 +17,30 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Adds security headers to all responses"""
 
     async def dispatch(self, request: Request, call_next):
-        response = await call_next(request)
-        response.headers["X-Content-Type-Options"] = "nosniff"
-        response.headers["X-Frame-Options"] = "DENY"
-        response.headers["X-XSS-Protection"] = "1; mode=block"
-        return response
+        try:
+            response = await call_next(request)
+
+            # Ensure response is a valid Response object
+            if not isinstance(response, Response):
+                logger.error(f"Invalid response type: {type(response)}")
+                return Response(
+                    content='{"detail":"Internal server error"}',
+                    status_code=500,
+                    headers={"Content-Type": "application/json"}
+                )
+
+            # Add security headers
+            response.headers["X-Content-Type-Options"] = "nosniff"
+            response.headers["X-Frame-Options"] = "DENY"
+            response.headers["X-XSS-Protection"] = "1; mode=block"
+            return response
+        except Exception as e:
+            logger.error(f"SecurityHeadersMiddleware error: {e}", exc_info=True)
+            return Response(
+                content='{"detail":"Internal server error"}',
+                status_code=500,
+                headers={"Content-Type": "application/json"}
+            )
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
@@ -60,6 +79,31 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
         import uuid
         request_id = str(uuid.uuid4())
         request.state.request_id = request_id
-        response = await call_next(request)
-        response.headers["X-Request-ID"] = request_id
-        return response
+
+        try:
+            response = await call_next(request)
+
+            # Ensure response is a valid Response object
+            if not isinstance(response, Response):
+                logger.error(f"Invalid response type: {type(response)}")
+                return Response(
+                    content='{"detail":"Internal server error"}',
+                    status_code=500,
+                    headers={
+                        "Content-Type": "application/json",
+                        "X-Request-ID": request_id
+                    }
+                )
+
+            response.headers["X-Request-ID"] = request_id
+            return response
+        except Exception as e:
+            logger.error(f"RequestIDMiddleware error: {e}", exc_info=True)
+            return Response(
+                content='{"detail":"Internal server error"}',
+                status_code=500,
+                headers={
+                    "Content-Type": "application/json",
+                    "X-Request-ID": request_id
+                }
+            )

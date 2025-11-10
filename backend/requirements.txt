@@ -19,18 +19,21 @@ python-binance==1.0.19
 
 # Authentication & Security
 python-jose[cryptography]==3.3.0
-passlib[bcrypt]==1.7.4
+bcrypt==4.1.3  # Direct bcrypt usage (removed passlib for compatibility)
 slowapi==0.1.9  # Rate limiting
+cryptography>=41.0.0  # For Fernet encryption
 
 # Settings & Validation
 pydantic==2.5.3
 pydantic-settings==2.1.0
 python-dotenv==1.0.0
+email-validator==2.3.0  # For EmailStr validation
 
 # Data Processing
 pandas==2.1.4
 numpy==1.26.3
-ta==0.11.0
+# ta==0.11.0  # DISABLED: Build fails, using manual TA implementation
+cachetools==6.2.1  # For market data caching
 
 # Machine Learning
 lightgbm==4.2.0

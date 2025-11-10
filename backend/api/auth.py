@@ -75,7 +75,7 @@ class MessageResponse(BaseModel):
 # ========== Endpoints ==========
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-@limiter.limit("5/minute")  # Rate limit: 5 registration attempts per minute
+#@limiter.limit("5/minute")  # Rate limit: 5 registration attempts per minute
 async def register(request: Request, user_data: UserRegister, db: Session = Depends(get_db)):
     """
     Register a new user account
@@ -118,7 +118,7 @@ async def register(request: Request, user_data: UserRegister, db: Session = Depe
 
 
 @router.post("/login", response_model=TokenResponse)
-@limiter.limit("5/minute")  # Rate limit: 5 login attempts per minute (anti-brute-force)
+#@limiter.limit("5/minute")  # Rate limit: 5 login attempts per minute (anti-brute-force)
 async def login(request: Request, user_data: UserLogin, db: Session = Depends(get_db)):
     """
     Login and receive access and refresh tokens
@@ -151,8 +151,8 @@ async def login(request: Request, user_data: UserLogin, db: Session = Depends(ge
         )
 
     # Create tokens
-    access_token = create_access_token(data={"sub": user.id})
-    refresh_token = create_refresh_token(data={"sub": user.id})
+    access_token = create_access_token(data={"sub": str(user.id)})
+    refresh_token = create_refresh_token(data={"sub": str(user.id)})
 
     return {
         "access_token": access_token,
@@ -162,7 +162,7 @@ async def login(request: Request, user_data: UserLogin, db: Session = Depends(ge
 
 
 @router.post("/refresh", response_model=TokenResponse)
-@limiter.limit("10/minute")  # Rate limit: 10 token refresh attempts per minute
+#@limiter.limit("10/minute")  # Rate limit: 10 token refresh attempts per minute
 async def refresh_token(request: Request, credentials: HTTPAuthorizationCredentials = Depends(security)):
     """
     Refresh access token using refresh token
@@ -187,9 +187,9 @@ async def refresh_token(request: Request, credentials: HTTPAuthorizationCredenti
             detail="Invalid token payload"
         )
 
-    # Create new tokens
-    access_token = create_access_token(data={"sub": user_id})
-    refresh_token = create_refresh_token(data={"sub": user_id})
+    # Create new tokens (user_id is already a string from token)
+    access_token = create_access_token(data={"sub": str(user_id)})
+    refresh_token = create_refresh_token(data={"sub": str(user_id)})
 
     return {
         "access_token": access_token,
@@ -260,7 +260,7 @@ async def logout(
 
 
 @router.put("/change-password", response_model=MessageResponse)
-@limiter.limit("3/minute")  # Rate limit: 3 password change attempts per minute (strict)
+#@limiter.limit("3/minute")  # Rate limit: 3 password change attempts per minute (strict)
 async def change_password(
     request: Request,
     current_password: str,

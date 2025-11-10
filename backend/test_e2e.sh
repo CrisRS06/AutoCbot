@@ -4,6 +4,7 @@
 # Tests all critical flows end-to-end
 
 set -e  # Exit on error
+set +H  # Disable history expansion (prevents ! escaping issues)
 
 API_BASE="http://localhost:8000/api/v1"
 ERRORS=()
@@ -45,14 +46,14 @@ test_endpoint() {
 
     if [ "$http_code" = "$expected_status" ]; then
         echo -e "${GREEN}✓ PASSED${NC} (HTTP $http_code)"
-        ((PASSED++))
+        PASSED=$((PASSED + 1))
         echo "$body"
         return 0
     else
         echo -e "${RED}✗ FAILED${NC} (Expected $expected_status, got $http_code)"
         echo "$body"
         ERRORS+=("$name: Expected HTTP $expected_status, got $http_code")
-        ((FAILED++))
+        FAILED=$((FAILED + 1))
         return 1
     fi
 }
@@ -64,12 +65,13 @@ echo ""
 
 # Test 1: Register new user
 USER_EMAIL="test_$(date +%s)@example.com"
-USER_PASSWORD="SecurePassword123!"
+USER_PASSWORD='SecurePassword123@'
 
 echo "Registering user: $USER_EMAIL"
+REGISTER_JSON=$(printf '{"email":"%s","password":"%s"}' "$USER_EMAIL" "$USER_PASSWORD")
 REGISTER_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
     -H "Content-Type: application/json" \
-    -d "{\"email\":\"$USER_EMAIL\",\"password\":\"$USER_PASSWORD\"}" \
+    -d "$REGISTER_JSON" \
     "$API_BASE/auth/register")
 
 REGISTER_CODE=$(echo "$REGISTER_RESPONSE" | tail -n1)
@@ -77,14 +79,14 @@ REGISTER_BODY=$(echo "$REGISTER_RESPONSE" | sed '$d')
 
 if [ "$REGISTER_CODE" = "201" ]; then
     echo -e "${GREEN}✓ Registration PASSED${NC}"
-    ((PASSED++))
+    PASSED=$((PASSED + 1))
     USER_ID=$(echo "$REGISTER_BODY" | grep -o '"id":[0-9]*' | cut -d: -f2)
     echo "User ID: $USER_ID"
 else
     echo -e "${RED}✗ Registration FAILED (HTTP $REGISTER_CODE)${NC}"
     echo "$REGISTER_BODY"
     ERRORS+=("Registration failed with HTTP $REGISTER_CODE")
-    ((FAILED++))
+    FAILED=$((FAILED + 1))
     exit 1
 fi
 
@@ -92,9 +94,10 @@ echo ""
 
 # Test 2: Login
 echo "Logging in..."
+LOGIN_JSON=$(printf '{"email":"%s","password":"%s"}' "$USER_EMAIL" "$USER_PASSWORD")
 LOGIN_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
     -H "Content-Type: application/json" \
-    -d "{\"email\":\"$USER_EMAIL\",\"password\":\"$USER_PASSWORD\"}" \
+    -d "$LOGIN_JSON" \
     "$API_BASE/auth/login")
 
 LOGIN_CODE=$(echo "$LOGIN_RESPONSE" | tail -n1)
@@ -102,7 +105,7 @@ LOGIN_BODY=$(echo "$LOGIN_RESPONSE" | sed '$d')
 
 if [ "$LOGIN_CODE" = "200" ]; then
     echo -e "${GREEN}✓ Login PASSED${NC}"
-    ((PASSED++))
+    PASSED=$((PASSED + 1))
     ACCESS_TOKEN=$(echo "$LOGIN_BODY" | grep -o '"access_token":"[^"]*' | cut -d'"' -f4)
     REFRESH_TOKEN=$(echo "$LOGIN_BODY" | grep -o '"refresh_token":"[^"]*' | cut -d'"' -f4)
     echo "Access token obtained (${#ACCESS_TOKEN} chars)"
@@ -110,7 +113,7 @@ else
     echo -e "${RED}✗ Login FAILED (HTTP $LOGIN_CODE)${NC}"
     echo "$LOGIN_BODY"
     ERRORS+=("Login failed with HTTP $LOGIN_CODE")
-    ((FAILED++))
+    FAILED=$((FAILED + 1))
     exit 1
 fi
 
@@ -127,13 +130,13 @@ ME_BODY=$(echo "$ME_RESPONSE" | sed '$d')
 
 if [ "$ME_CODE" = "200" ]; then
     echo -e "${GREEN}✓ Get /me PASSED${NC}"
-    ((PASSED++))
+    PASSED=$((PASSED + 1))
     echo "$ME_BODY"
 else
     echo -e "${RED}✗ Get /me FAILED (HTTP $ME_CODE)${NC}"
     echo "$ME_BODY"
     ERRORS+=("Get /me failed with HTTP $ME_CODE")
-    ((FAILED++))
+    FAILED=$((FAILED + 1))
 fi
 
 echo ""
@@ -149,11 +152,11 @@ NO_AUTH_CODE=$(echo "$NO_AUTH_RESPONSE" | tail -n1)
 
 if [ "$NO_AUTH_CODE" = "401" ] || [ "$NO_AUTH_CODE" = "403" ]; then
     echo -e "${GREEN}✓ Protected endpoint blocks unauthenticated access${NC}"
-    ((PASSED++))
+    PASSED=$((PASSED + 1))
 else
     echo -e "${RED}✗ Protected endpoint allows unauthenticated access (HTTP $NO_AUTH_CODE)${NC}"
     ERRORS+=("Protected endpoint should return 401/403, got $NO_AUTH_CODE")
-    ((FAILED++))
+    FAILED=$((FAILED + 1))
 fi
 
 echo ""
@@ -169,13 +172,13 @@ SETTINGS_BODY=$(echo "$SETTINGS_RESPONSE" | sed '$d')
 
 if [ "$SETTINGS_CODE" = "200" ]; then
     echo -e "${GREEN}✓ Protected endpoint accepts valid token${NC}"
-    ((PASSED++))
+    PASSED=$((PASSED + 1))
     echo "Settings: $SETTINGS_BODY"
 else
     echo -e "${RED}✗ Protected endpoint rejects valid token (HTTP $SETTINGS_CODE)${NC}"
     echo "$SETTINGS_BODY"
     ERRORS+=("Settings endpoint failed with HTTP $SETTINGS_CODE")
-    ((FAILED++))
+    FAILED=$((FAILED + 1))
 fi
 
 echo ""
@@ -207,12 +210,12 @@ SETTINGS_UPD_BODY=$(echo "$UPDATE_SETTINGS" | sed '$d')
 
 if [ "$SETTINGS_UPD_CODE" = "200" ]; then
     echo -e "${GREEN}✓ Settings update PASSED${NC}"
-    ((PASSED++))
+    PASSED=$((PASSED + 1))
 else
     echo -e "${RED}✗ Settings update FAILED (HTTP $SETTINGS_UPD_CODE)${NC}"
     echo "$SETTINGS_UPD_BODY"
     ERRORS+=("Settings update failed with HTTP $SETTINGS_UPD_CODE")
-    ((FAILED++))
+    FAILED=$((FAILED + 1))
 fi
 
 echo ""
@@ -229,15 +232,15 @@ MARKET_CODE=$(echo "$MARKET_RESPONSE" | tail -n1)
 if [ "$MARKET_CODE" = "200" ] || [ "$MARKET_CODE" = "500" ]; then
     if [ "$MARKET_CODE" = "200" ]; then
         echo -e "${GREEN}✓ Market overview accessible${NC}"
-        ((PASSED++))
+        PASSED=$((PASSED + 1))
     else
         echo -e "${YELLOW}⚠ Market overview returned 500 (external API issue expected)${NC}"
         WARNINGS+=("Market API returned 500 - external API connectivity issue")
-        ((PASSED++))
+        PASSED=$((PASSED + 1))
     fi
 else
     echo -e "${RED}✗ Market overview failed unexpectedly (HTTP $MARKET_CODE)${NC}"
-    ((FAILED++))
+    FAILED=$((FAILED + 1))
 fi
 
 echo ""
@@ -257,13 +260,13 @@ STRAT_LIST_BODY=$(echo "$STRAT_LIST_RESPONSE" | sed '$d')
 
 if [ "$STRAT_LIST_CODE" = "200" ]; then
     echo -e "${GREEN}✓ List strategies PASSED${NC}"
-    ((PASSED++))
+    PASSED=$((PASSED + 1))
     echo "Strategies: $STRAT_LIST_BODY"
 else
     echo -e "${RED}✗ List strategies FAILED (HTTP $STRAT_LIST_CODE)${NC}"
     echo "$STRAT_LIST_BODY"
     ERRORS+=("List strategies failed with HTTP $STRAT_LIST_CODE")
-    ((FAILED++))
+    FAILED=$((FAILED + 1))
 fi
 
 echo ""
@@ -295,13 +298,13 @@ CREATE_STRAT_BODY=$(echo "$CREATE_STRAT" | sed '$d')
 
 if [ "$CREATE_STRAT_CODE" = "200" ]; then
     echo -e "${GREEN}✓ Create strategy PASSED${NC}"
-    ((PASSED++))
+    PASSED=$((PASSED + 1))
     echo "$CREATE_STRAT_BODY"
 else
     echo -e "${RED}✗ Create strategy FAILED (HTTP $CREATE_STRAT_CODE)${NC}"
     echo "$CREATE_STRAT_BODY"
     ERRORS+=("Create strategy failed with HTTP $CREATE_STRAT_CODE")
-    ((FAILED++))
+    FAILED=$((FAILED + 1))
 fi
 
 echo ""
@@ -321,13 +324,13 @@ LOGOUT_BODY=$(echo "$LOGOUT_RESPONSE" | sed '$d')
 
 if [ "$LOGOUT_CODE" = "200" ]; then
     echo -e "${GREEN}✓ Logout PASSED${NC}"
-    ((PASSED++))
+    PASSED=$((PASSED + 1))
     echo "$LOGOUT_BODY"
 else
     echo -e "${RED}✗ Logout FAILED (HTTP $LOGOUT_CODE)${NC}"
     echo "$LOGOUT_BODY"
     ERRORS+=("Logout failed with HTTP $LOGOUT_CODE")
-    ((FAILED++))
+    FAILED=$((FAILED + 1))
 fi
 
 echo ""
