@@ -81,6 +81,31 @@ class User(Base):
         return f"<User(id={self.id}, email='{self.email}')>"
 
 
+class TokenBlacklist(Base):
+    """Blacklisted JWT tokens for logout/revocation"""
+    __tablename__ = "token_blacklist"
+
+    id = Column(Integer, primary_key=True, index=True)
+    token_jti = Column(String(255), nullable=False, unique=True, index=True)  # JWT ID claim
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    token_type = Column(String(20), nullable=False)  # "access" or "refresh"
+
+    # Expiration tracking
+    expires_at = Column(DateTime(timezone=True), nullable=False, index=True)
+
+    # Timestamps
+    blacklisted_at = Column(DateTime(timezone=True), server_default=func.now())
+    reason = Column(String(255), nullable=True)  # "logout", "security", "expired"
+
+    # Indexes
+    __table_args__ = (
+        Index('idx_token_jti_expires', 'token_jti', 'expires_at'),
+    )
+
+    def __repr__(self):
+        return f"<TokenBlacklist(jti={self.token_jti}, user_id={self.user_id})>"
+
+
 class UserSettingsModel(Base):
     """Per-user settings with encrypted sensitive data"""
     __tablename__ = "user_settings"

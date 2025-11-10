@@ -3,13 +3,14 @@ Authentication API endpoints
 Handles user registration, login, token refresh, and user management
 """
 from fastapi import APIRouter, HTTPException, Depends, status
-from fastapi.security import HTTPBearer
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr
 from typing import Optional
+from datetime import datetime
 
 from database.session import get_db
-from database.models import User
+from database.models import User, TokenBlacklist
 from utils.auth import (
     verify_password,
     get_password_hash,
@@ -205,15 +206,53 @@ async def get_me(current_user: User = Depends(get_current_user)):
 
 
 @router.post("/logout", response_model=MessageResponse)
-async def logout(current_user: User = Depends(get_current_user)):
+async def logout(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """
-    Logout current user
+    Logout current user by blacklisting the access token
 
-    Note: With JWT, logout is handled client-side by discarding the tokens.
-    This endpoint exists for API consistency.
-    For true token revocation, implement a token blacklist in Redis.
+    Adds the current access token to the blacklist to prevent reuse.
+    Note: Refresh tokens should also be discarded client-side.
+
+    Requires valid access token in Authorization header.
     """
-    return {"message": "Successfully logged out. Please discard your tokens."}
+    try:
+        # Extract and decode token
+        token = credentials.credentials
+        payload = verify_token(token)
+
+        token_jti = payload.get("jti")
+        token_type = payload.get("type", "access")
+        exp_timestamp = payload.get("exp")
+
+        if not token_jti:
+            # Old tokens without JTI - just return success
+            return {"message": "Successfully logged out. Please discard your tokens."}
+
+        # Convert expiration to datetime
+        expires_at = datetime.utcfromtimestamp(exp_timestamp) if exp_timestamp else datetime.utcnow()
+
+        # Add token to blacklist
+        blacklisted_token = TokenBlacklist(
+            token_jti=token_jti,
+            user_id=current_user.id,
+            token_type=token_type,
+            expires_at=expires_at,
+            reason="logout"
+        )
+
+        db.add(blacklisted_token)
+        db.commit()
+
+        return {"message": "Successfully logged out. Token has been revoked."}
+
+    except Exception as e:
+        db.rollback()
+        # Even if blacklist fails, return success to avoid blocking logout
+        return {"message": "Successfully logged out. Please discard your tokens."}
 
 
 @router.put("/change-password", response_model=MessageResponse)

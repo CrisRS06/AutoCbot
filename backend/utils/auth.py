@@ -4,6 +4,7 @@ Implements secure password hashing with bcrypt and JWT token generation/validati
 """
 from datetime import datetime, timedelta
 from typing import Optional
+import uuid
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
@@ -12,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from utils.config import settings
 from database.session import get_db
-from database.models import User
+from database.models import User, TokenBlacklist
 
 # Password hashing with bcrypt
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -86,7 +87,7 @@ def validate_password_strength(password: str) -> tuple[bool, str]:
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     """
-    Create a JWT access token
+    Create a JWT access token with unique JTI for blacklist support
 
     Args:
         data: Dictionary of claims to encode in the token (typically {"sub": user_id})
@@ -101,14 +102,16 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     else:
         expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 
-    to_encode.update({"exp": expire, "type": "access"})
+    # Generate unique JWT ID for blacklist support
+    jti = str(uuid.uuid4())
+    to_encode.update({"exp": expire, "type": "access", "jti": jti})
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
     return encoded_jwt
 
 
 def create_refresh_token(data: dict) -> str:
     """
-    Create a JWT refresh token
+    Create a JWT refresh token with unique JTI for blacklist support
 
     Args:
         data: Dictionary of claims to encode in the token (typically {"sub": user_id})
@@ -118,7 +121,10 @@ def create_refresh_token(data: dict) -> str:
     """
     to_encode = data.copy()
     expire = datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
-    to_encode.update({"exp": expire, "type": "refresh"})
+
+    # Generate unique JWT ID for blacklist support
+    jti = str(uuid.uuid4())
+    to_encode.update({"exp": expire, "type": "refresh", "jti": jti})
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
     return encoded_jwt
 
@@ -153,6 +159,7 @@ async def get_current_user(
 ) -> User:
     """
     Dependency to get the current authenticated user from JWT token
+    Checks token blacklist to support logout/revocation
     Use this in protected endpoints to require authentication
 
     Args:
@@ -163,7 +170,7 @@ async def get_current_user(
         Authenticated User object
 
     Raises:
-        HTTPException: If authentication fails
+        HTTPException: If authentication fails or token is blacklisted
 
     Usage:
         @router.get("/protected")
@@ -179,6 +186,18 @@ async def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication credentials - no user ID in token"
         )
+
+    # Check if token is blacklisted (logout/revocation)
+    token_jti = payload.get("jti")
+    if token_jti:
+        blacklisted = db.query(TokenBlacklist).filter(
+            TokenBlacklist.token_jti == token_jti
+        ).first()
+        if blacklisted:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token has been revoked. Please log in again."
+            )
 
     user = db.query(User).filter(User.id == user_id).first()
     if user is None:
