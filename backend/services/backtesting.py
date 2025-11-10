@@ -28,30 +28,32 @@ class BacktestingService:
         """
         self.db = db
 
-    async def run_backtest(self, request: BacktestRequest) -> BacktestResult:
+    async def run_backtest(self, request: BacktestRequest, user_id: int) -> BacktestResult:
         """
-        Run a complete backtest using the BacktestEngine
+        Run a complete backtest using the BacktestEngine for a specific user
 
         Args:
             request: BacktestRequest with strategy name and parameters
+            user_id: User ID to verify strategy ownership
 
         Returns:
             BacktestResult with real metrics
         """
-        logger.info(f"Running backtest for strategy: {request.strategy_name}")
+        logger.info(f"Running backtest for strategy: {request.strategy_name} (user {user_id})")
 
         if not self.db:
             logger.error("No database session available")
             return self._create_empty_result(request.strategy_name)
 
         try:
-            # Get strategy from database
+            # Get strategy from database (must belong to user)
             strategy = self.db.query(Strategy).filter(
-                Strategy.name == request.strategy_name
+                Strategy.name == request.strategy_name,
+                Strategy.user_id == user_id
             ).first()
 
             if not strategy:
-                logger.error(f"Strategy not found: {request.strategy_name}")
+                logger.error(f"Strategy not found or doesn't belong to user: {request.strategy_name}")
                 return self._create_empty_result(request.strategy_name)
 
             # Parse dates (default to last 30 days)
@@ -129,11 +131,12 @@ class BacktestingService:
             logger.error(f"Error running backtest: {e}", exc_info=True)
             return self._create_empty_result(request.strategy_name)
 
-    async def get_results(self, limit: int = 10) -> List[BacktestResult]:
+    async def get_results(self, user_id: int, limit: int = 10) -> List[BacktestResult]:
         """
-        Get previous backtest results from database
+        Get previous backtest results from database for a specific user
 
         Args:
+            user_id: User ID to filter results
             limit: Maximum number of results to return
 
         Returns:
@@ -144,8 +147,10 @@ class BacktestingService:
             return []
 
         try:
-            # Get recent backtest results from database
-            results = self.db.query(BacktestResultModel).order_by(
+            # Get recent backtest results from database (only for user's strategies)
+            results = self.db.query(BacktestResultModel).join(Strategy).filter(
+                Strategy.user_id == user_id
+            ).order_by(
                 BacktestResultModel.created_at.desc()
             ).limit(limit).all()
 
@@ -194,12 +199,13 @@ class BacktestingService:
             logger.error(f"Error retrieving backtest results: {e}")
             return []
 
-    async def get_backtest_by_id(self, backtest_id: int) -> Dict:
+    async def get_backtest_by_id(self, backtest_id: int, user_id: int) -> Dict:
         """
-        Get detailed backtest result by ID
+        Get detailed backtest result by ID for a specific user
 
         Args:
             backtest_id: Backtest database ID
+            user_id: User ID to verify ownership
 
         Returns:
             Dict with detailed backtest information
@@ -208,8 +214,10 @@ class BacktestingService:
             return {}
 
         try:
-            result = self.db.query(BacktestResultModel).filter(
-                BacktestResultModel.id == backtest_id
+            # Get backtest result (must belong to user's strategy)
+            result = self.db.query(BacktestResultModel).join(Strategy).filter(
+                BacktestResultModel.id == backtest_id,
+                Strategy.user_id == user_id
             ).first()
 
             if not result:

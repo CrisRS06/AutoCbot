@@ -25,10 +25,10 @@ async def list_strategies(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """List all available strategies"""
+    """List all strategies for the authenticated user"""
     try:
         strategy_manager = StrategyManager(db=db)
-        strategies = await strategy_manager.list_strategies()
+        strategies = await strategy_manager.list_strategies(user_id=current_user.id)
         return strategies
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -40,10 +40,10 @@ async def get_strategy(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Get strategy configuration"""
+    """Get strategy configuration for the authenticated user"""
     try:
         strategy_manager = StrategyManager(db=db)
-        strategy = await strategy_manager.get_strategy(strategy_name)
+        strategy = await strategy_manager.get_strategy(strategy_name, user_id=current_user.id)
         if not strategy:
             raise HTTPException(status_code=404, detail=f"Strategy {strategy_name} not found")
         return strategy
@@ -59,10 +59,10 @@ async def create_strategy(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Create or update a strategy"""
+    """Create or update a strategy for the authenticated user"""
     try:
         strategy_manager = StrategyManager(db=db)
-        strategy = await strategy_manager.save_strategy(config)
+        strategy = await strategy_manager.save_strategy(config, user_id=current_user.id)
         return strategy
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -74,10 +74,10 @@ async def toggle_strategy(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Enable/disable a strategy"""
+    """Enable/disable a strategy for the authenticated user"""
     try:
         strategy_manager = StrategyManager(db=db)
-        strategy = await strategy_manager.toggle_strategy(strategy_name)
+        strategy = await strategy_manager.toggle_strategy(strategy_name, user_id=current_user.id)
         return strategy
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -89,10 +89,10 @@ async def delete_strategy(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Delete a strategy"""
+    """Delete a strategy for the authenticated user"""
     try:
         strategy_manager = StrategyManager(db=db)
-        result = await strategy_manager.delete_strategy(strategy_name)
+        result = await strategy_manager.delete_strategy(strategy_name, user_id=current_user.id)
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -104,10 +104,10 @@ async def run_backtest(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Run a backtest"""
+    """Run a backtest for the authenticated user's strategy"""
     try:
         backtest_service = BacktestingService(db=db)
-        result = await backtest_service.run_backtest(request)
+        result = await backtest_service.run_backtest(request, user_id=current_user.id)
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -119,10 +119,10 @@ async def get_backtest_results(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Get previous backtest results"""
+    """Get previous backtest results for the authenticated user"""
     try:
         backtest_service = BacktestingService(db=db)
-        results = await backtest_service.get_results(limit)
+        results = await backtest_service.get_results(user_id=current_user.id, limit=limit)
         return results
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -134,10 +134,10 @@ async def get_backtest_details(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Get detailed backtest result by ID"""
+    """Get detailed backtest result by ID for the authenticated user"""
     try:
         backtest_service = BacktestingService(db=db)
-        result = await backtest_service.get_backtest_by_id(backtest_id)
+        result = await backtest_service.get_backtest_by_id(backtest_id, user_id=current_user.id)
         if not result:
             raise HTTPException(status_code=404, detail="Backtest not found")
         return result

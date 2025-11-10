@@ -44,11 +44,12 @@ class StrategyManager:
             "is_active": config.enabled
         }
 
-    async def list_strategies(self, include_deleted: bool = False) -> List[StrategyConfig]:
+    async def list_strategies(self, user_id: int, include_deleted: bool = False) -> List[StrategyConfig]:
         """
-        List all strategies
+        List all strategies for a specific user
 
         Args:
+            user_id: User ID to filter strategies
             include_deleted: Include soft-deleted strategies
 
         Returns:
@@ -59,7 +60,7 @@ class StrategyManager:
             return []
 
         try:
-            query = self.db.query(Strategy)
+            query = self.db.query(Strategy).filter(Strategy.user_id == user_id)
             if not include_deleted:
                 query = query.filter(Strategy.is_deleted == False)
 
@@ -67,15 +68,16 @@ class StrategyManager:
             return [self._strategy_to_config(s) for s in strategies]
 
         except Exception as e:
-            logger.error(f"Error listing strategies: {e}")
+            logger.error(f"Error listing strategies for user {user_id}: {e}")
             return []
 
-    async def get_strategy(self, name: str) -> Optional[StrategyConfig]:
+    async def get_strategy(self, name: str, user_id: int) -> Optional[StrategyConfig]:
         """
-        Get strategy by name
+        Get strategy by name for a specific user
 
         Args:
             name: Strategy name
+            user_id: User ID to verify ownership
 
         Returns:
             StrategyConfig or None
@@ -88,6 +90,7 @@ class StrategyManager:
             strategy = self.db.query(Strategy).filter(
                 and_(
                     Strategy.name == name,
+                    Strategy.user_id == user_id,
                     Strategy.is_deleted == False
                 )
             ).first()
@@ -97,7 +100,7 @@ class StrategyManager:
             return None
 
         except Exception as e:
-            logger.error(f"Error getting strategy {name}: {e}")
+            logger.error(f"Error getting strategy {name} for user {user_id}: {e}")
             return None
 
     async def get_strategy_by_id(self, strategy_id: int) -> Optional[StrategyConfig]:
@@ -130,12 +133,13 @@ class StrategyManager:
             logger.error(f"Error getting strategy by ID {strategy_id}: {e}")
             return None
 
-    async def save_strategy(self, config: StrategyConfig) -> StrategyConfig:
+    async def save_strategy(self, config: StrategyConfig, user_id: int) -> StrategyConfig:
         """
-        Save or update strategy
+        Save or update strategy for a specific user
 
         Args:
             config: StrategyConfig to save
+            user_id: User ID to associate with strategy
 
         Returns:
             Saved StrategyConfig
@@ -145,10 +149,11 @@ class StrategyManager:
             raise ValueError("Database session not available")
 
         try:
-            # Check if strategy exists
+            # Check if strategy exists for this user
             existing = self.db.query(Strategy).filter(
                 and_(
                     Strategy.name == config.name,
+                    Strategy.user_id == user_id,
                     Strategy.is_deleted == False
                 )
             ).first()
@@ -161,36 +166,38 @@ class StrategyManager:
 
                 self.db.commit()
                 self.db.refresh(existing)
-                logger.info(f"Updated strategy: {config.name}")
+                logger.info(f"Updated strategy: {config.name} for user {user_id}")
                 return self._strategy_to_config(existing)
             else:
                 # Create new strategy
                 params = self._config_to_strategy_params(config)
+                params['user_id'] = user_id  # Associate with user
                 new_strategy = Strategy(**params)
 
                 self.db.add(new_strategy)
                 self.db.commit()
                 self.db.refresh(new_strategy)
-                logger.info(f"Created new strategy: {config.name}")
+                logger.info(f"Created new strategy: {config.name} for user {user_id}")
                 return self._strategy_to_config(new_strategy)
 
         except Exception as e:
             self.db.rollback()
-            logger.error(f"Error saving strategy {config.name}: {e}")
+            logger.error(f"Error saving strategy {config.name} for user {user_id}: {e}")
             raise
 
-    async def toggle_strategy(self, name: str) -> StrategyConfig:
+    async def toggle_strategy(self, name: str, user_id: int) -> StrategyConfig:
         """
-        Enable/disable strategy
+        Enable/disable strategy for a specific user
 
         Args:
             name: Strategy name
+            user_id: User ID to verify ownership
 
         Returns:
             Updated StrategyConfig
 
         Raises:
-            ValueError: If strategy not found
+            ValueError: If strategy not found or user doesn't own it
         """
         if not self.db:
             raise ValueError("Database session not available")
@@ -199,31 +206,33 @@ class StrategyManager:
             strategy = self.db.query(Strategy).filter(
                 and_(
                     Strategy.name == name,
+                    Strategy.user_id == user_id,
                     Strategy.is_deleted == False
                 )
             ).first()
 
             if not strategy:
-                raise ValueError(f"Strategy {name} not found")
+                raise ValueError(f"Strategy {name} not found for user {user_id}")
 
             strategy.is_active = not strategy.is_active
             self.db.commit()
             self.db.refresh(strategy)
 
-            logger.info(f"Toggled strategy {name}: active={strategy.is_active}")
+            logger.info(f"Toggled strategy {name} for user {user_id}: active={strategy.is_active}")
             return self._strategy_to_config(strategy)
 
         except Exception as e:
             self.db.rollback()
-            logger.error(f"Error toggling strategy {name}: {e}")
+            logger.error(f"Error toggling strategy {name} for user {user_id}: {e}")
             raise
 
-    async def delete_strategy(self, name: str, hard_delete: bool = False) -> Dict:
+    async def delete_strategy(self, name: str, user_id: int, hard_delete: bool = False) -> Dict:
         """
-        Delete strategy (soft delete by default)
+        Delete strategy for a specific user (soft delete by default)
 
         Args:
             name: Strategy name
+            user_id: User ID to verify ownership
             hard_delete: If True, permanently delete from database
 
         Returns:
@@ -234,33 +243,39 @@ class StrategyManager:
 
         try:
             strategy = self.db.query(Strategy).filter(
-                Strategy.name == name
+                and_(
+                    Strategy.name == name,
+                    Strategy.user_id == user_id
+                )
             ).first()
 
             if not strategy:
-                return {"success": False, "error": "Strategy not found"}
+                return {"success": False, "error": "Strategy not found for user"}
 
             if hard_delete:
                 # Permanently delete
                 self.db.delete(strategy)
-                logger.info(f"Hard deleted strategy: {name}")
+                logger.info(f"Hard deleted strategy: {name} for user {user_id}")
             else:
                 # Soft delete
                 strategy.is_deleted = True
                 strategy.is_active = False
-                logger.info(f"Soft deleted strategy: {name}")
+                logger.info(f"Soft deleted strategy: {name} for user {user_id}")
 
             self.db.commit()
             return {"success": True}
 
         except Exception as e:
             self.db.rollback()
-            logger.error(f"Error deleting strategy {name}: {e}")
+            logger.error(f"Error deleting strategy {name} for user {user_id}: {e}")
             return {"success": False, "error": str(e)}
 
-    async def get_active_strategies(self) -> List[StrategyConfig]:
+    async def get_active_strategies(self, user_id: int) -> List[StrategyConfig]:
         """
-        Get all active (enabled) strategies
+        Get all active (enabled) strategies for a specific user
+
+        Args:
+            user_id: User ID to filter strategies
 
         Returns:
             List of active StrategyConfig objects
@@ -272,6 +287,7 @@ class StrategyManager:
         try:
             strategies = self.db.query(Strategy).filter(
                 and_(
+                    Strategy.user_id == user_id,
                     Strategy.is_active == True,
                     Strategy.is_deleted == False
                 )
@@ -280,5 +296,5 @@ class StrategyManager:
             return [self._strategy_to_config(s) for s in strategies]
 
         except Exception as e:
-            logger.error(f"Error getting active strategies: {e}")
+            logger.error(f"Error getting active strategies for user {user_id}: {e}")
             return []

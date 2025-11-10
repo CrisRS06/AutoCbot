@@ -30,8 +30,11 @@ def get_trading_service(db: Session = Depends(get_db)) -> TradingService:
 
 
 @router.get("/signals", response_model=List[TradingSignal])
-async def get_trading_signals(symbols: str = None):
-    """Get current trading signals"""
+async def get_trading_signals(
+    symbols: str = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Get current trading signals (requires authentication)"""
     try:
         symbol_list = None
         if symbols:
@@ -44,8 +47,11 @@ async def get_trading_signals(symbols: str = None):
 
 
 @router.get("/signal/{symbol}", response_model=TradingSignal)
-async def get_signal(symbol: str):
-    """Get trading signal for a specific symbol"""
+async def get_signal(
+    symbol: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Get trading signal for a specific symbol (requires authentication)"""
     try:
         signal = await signal_service.generate_signal(symbol)
         if not signal:
