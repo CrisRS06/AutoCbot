@@ -14,6 +14,8 @@ from models.schemas import (
 from services.trading import TradingService
 from services.signal_generator import SignalGeneratorService
 from database.session import get_db
+from database.models import User
+from utils.auth import get_current_user
 
 router = APIRouter()
 signal_service = SignalGeneratorService()
@@ -65,7 +67,8 @@ async def create_order(
     stop_loss: Optional[float] = None,
     take_profit: Optional[float] = None,
     validate_risk: bool = True,
-    trading_service: TradingService = Depends(get_trading_service)
+    trading_service: TradingService = Depends(get_trading_service),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Create a new order with optional risk management
@@ -106,7 +109,8 @@ async def create_smart_order(
     risk_pct: float = 0.02,
     stop_loss_pct: Optional[float] = None,
     take_profit_pct: Optional[float] = None,
-    trading_service: TradingService = Depends(get_trading_service)
+    trading_service: TradingService = Depends(get_trading_service),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Create order with automatic position sizing based on risk
@@ -139,7 +143,8 @@ async def create_smart_order(
 @router.get("/orders")
 async def get_orders(
     status: str = "open",
-    trading_service: TradingService = Depends(get_trading_service)
+    trading_service: TradingService = Depends(get_trading_service),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Get orders by status
@@ -158,7 +163,8 @@ async def get_orders(
 async def cancel_order(
     order_id: str,
     symbol: Optional[str] = None,
-    trading_service: TradingService = Depends(get_trading_service)
+    trading_service: TradingService = Depends(get_trading_service),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Cancel an order
@@ -179,7 +185,10 @@ async def cancel_order(
 
 
 @router.get("/positions")
-async def get_positions(trading_service: TradingService = Depends(get_trading_service)):
+async def get_positions(
+    trading_service: TradingService = Depends(get_trading_service),
+    current_user: User = Depends(get_current_user)
+):
     """Get current open positions"""
     try:
         positions = await trading_service.get_positions()
@@ -189,7 +198,10 @@ async def get_positions(trading_service: TradingService = Depends(get_trading_se
 
 
 @router.get("/balance")
-async def get_balance(trading_service: TradingService = Depends(get_trading_service)):
+async def get_balance(
+    trading_service: TradingService = Depends(get_trading_service),
+    current_user: User = Depends(get_current_user)
+):
     """Get account balance"""
     try:
         balance = await trading_service.get_balance()
@@ -199,7 +211,10 @@ async def get_balance(trading_service: TradingService = Depends(get_trading_serv
 
 
 @router.get("/portfolio-value")
-async def get_portfolio_value(trading_service: TradingService = Depends(get_trading_service)):
+async def get_portfolio_value(
+    trading_service: TradingService = Depends(get_trading_service),
+    current_user: User = Depends(get_current_user)
+):
     """Get total portfolio value in USDT"""
     try:
         value = await trading_service.get_portfolio_value()
@@ -212,7 +227,8 @@ async def get_portfolio_value(trading_service: TradingService = Depends(get_trad
 async def get_trades(
     symbol: Optional[str] = None,
     limit: int = 100,
-    trading_service: TradingService = Depends(get_trading_service)
+    trading_service: TradingService = Depends(get_trading_service),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Get trade history
@@ -229,7 +245,10 @@ async def get_trades(
 
 
 @router.post("/close-all")
-async def close_all_positions(trading_service: TradingService = Depends(get_trading_service)):
+async def close_all_positions(
+    trading_service: TradingService = Depends(get_trading_service),
+    current_user: User = Depends(get_current_user)
+):
     """Close all open positions (emergency stop)"""
     try:
         result = await trading_service.close_all_positions()

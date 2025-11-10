@@ -14,12 +14,17 @@ from models.schemas import (
 from services.strategy_manager import StrategyManager
 from services.backtesting import BacktestingService
 from database.session import get_db
+from database.models import User
+from utils.auth import get_current_user
 
 router = APIRouter()
 
 
 @router.get("/list", response_model=List[StrategyConfig])
-async def list_strategies(db: Session = Depends(get_db)):
+async def list_strategies(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """List all available strategies"""
     try:
         strategy_manager = StrategyManager(db=db)
@@ -30,7 +35,11 @@ async def list_strategies(db: Session = Depends(get_db)):
 
 
 @router.get("/{strategy_name}", response_model=StrategyConfig)
-async def get_strategy(strategy_name: str, db: Session = Depends(get_db)):
+async def get_strategy(
+    strategy_name: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """Get strategy configuration"""
     try:
         strategy_manager = StrategyManager(db=db)
@@ -45,7 +54,11 @@ async def get_strategy(strategy_name: str, db: Session = Depends(get_db)):
 
 
 @router.post("/", response_model=StrategyConfig)
-async def create_strategy(config: StrategyConfig, db: Session = Depends(get_db)):
+async def create_strategy(
+    config: StrategyConfig,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """Create or update a strategy"""
     try:
         strategy_manager = StrategyManager(db=db)
@@ -56,7 +69,11 @@ async def create_strategy(config: StrategyConfig, db: Session = Depends(get_db))
 
 
 @router.put("/{strategy_name}/toggle")
-async def toggle_strategy(strategy_name: str, db: Session = Depends(get_db)):
+async def toggle_strategy(
+    strategy_name: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """Enable/disable a strategy"""
     try:
         strategy_manager = StrategyManager(db=db)
@@ -67,7 +84,11 @@ async def toggle_strategy(strategy_name: str, db: Session = Depends(get_db)):
 
 
 @router.delete("/{strategy_name}")
-async def delete_strategy(strategy_name: str, db: Session = Depends(get_db)):
+async def delete_strategy(
+    strategy_name: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """Delete a strategy"""
     try:
         strategy_manager = StrategyManager(db=db)
@@ -78,7 +99,11 @@ async def delete_strategy(strategy_name: str, db: Session = Depends(get_db)):
 
 
 @router.post("/backtest", response_model=BacktestResult)
-async def run_backtest(request: BacktestRequest, db: Session = Depends(get_db)):
+async def run_backtest(
+    request: BacktestRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """Run a backtest"""
     try:
         backtest_service = BacktestingService(db=db)
@@ -89,7 +114,11 @@ async def run_backtest(request: BacktestRequest, db: Session = Depends(get_db)):
 
 
 @router.get("/backtest/results")
-async def get_backtest_results(limit: int = 10, db: Session = Depends(get_db)):
+async def get_backtest_results(
+    limit: int = 10,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """Get previous backtest results"""
     try:
         backtest_service = BacktestingService(db=db)
@@ -100,7 +129,11 @@ async def get_backtest_results(limit: int = 10, db: Session = Depends(get_db)):
 
 
 @router.get("/backtest/{backtest_id}")
-async def get_backtest_details(backtest_id: int, db: Session = Depends(get_db)):
+async def get_backtest_details(
+    backtest_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """Get detailed backtest result by ID"""
     try:
         backtest_service = BacktestingService(db=db)

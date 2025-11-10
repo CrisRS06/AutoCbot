@@ -3,8 +3,10 @@ Settings API Endpoints
 Handles user configuration CRUD operations
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from models.settings import UserSettings, settings_storage
+from database.models import User
+from utils.auth import get_current_user
 import logging
 
 logger = logging.getLogger(__name__)
@@ -13,7 +15,7 @@ router = APIRouter(tags=["settings"])
 
 
 @router.get("/", response_model=UserSettings)
-async def get_settings():
+async def get_settings(current_user: User = Depends(get_current_user)):
     """
     Get current user settings
 
@@ -30,7 +32,10 @@ async def get_settings():
 
 
 @router.put("/", response_model=UserSettings)
-async def update_settings(settings: UserSettings):
+async def update_settings(
+    settings: UserSettings,
+    current_user: User = Depends(get_current_user)
+):
     """
     Update user settings
 
@@ -65,7 +70,7 @@ async def update_settings(settings: UserSettings):
 
 
 @router.post("/reset")
-async def reset_settings():
+async def reset_settings(current_user: User = Depends(get_current_user)):
     """
     Reset settings to defaults
 

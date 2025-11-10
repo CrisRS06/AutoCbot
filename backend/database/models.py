@@ -62,7 +62,7 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String(255), unique=True, index=True, nullable=False)
-    hashed_password = Column(String(255), nullable=True)  # Nullable for demo mode
+    hashed_password = Column(String(255), nullable=False)  # Required for MVP security
     is_active = Column(Boolean, default=True)
     is_superuser = Column(Boolean, default=False)
 
