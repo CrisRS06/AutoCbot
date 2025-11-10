@@ -277,19 +277,16 @@ CREATE_STRAT=$(curl -s -w "\n%{http_code}" -X POST \
     -H "Authorization: Bearer $ACCESS_TOKEN" \
     -H "Content-Type: application/json" \
     -d '{
-        "name": "Test Strategy",
-        "description": "E2E test strategy",
-        "type": "momentum",
-        "parameters": {
-            "symbols": ["BTC/USDT"],
-            "timeframe": "1h",
-            "indicators": {
-                "rsi_period": 14,
-                "rsi_overbought": 70,
-                "rsi_oversold": 30
-            }
-        },
-        "is_active": false
+        "name": "Test Strategy E2E",
+        "enabled": false,
+        "pairs": ["BTC/USDT", "ETH/USDT"],
+        "timeframe": "1h",
+        "stake_amount": 100.0,
+        "stop_loss": -0.05,
+        "take_profit": 0.10,
+        "max_open_trades": 3,
+        "use_ml": true,
+        "use_sentiment": false
     }' \
     "$API_BASE/strategy/")
 

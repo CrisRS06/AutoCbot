@@ -27,20 +27,43 @@ class StrategyManager:
 
     def _strategy_to_config(self, strategy: Strategy) -> StrategyConfig:
         """Convert database Strategy model to StrategyConfig schema"""
+        params = strategy.parameters or {}
         return StrategyConfig(
             name=strategy.name,
-            type=strategy.type.value,
             enabled=strategy.is_active,
-            parameters=strategy.parameters or {}
+            pairs=params.get("pairs", []),
+            timeframe=params.get("timeframe", "1h"),
+            stake_amount=params.get("stake_amount", 100.0),
+            stop_loss=params.get("stop_loss", -0.05),
+            take_profit=params.get("take_profit", 0.10),
+            max_open_trades=params.get("max_open_trades", 5),
+            trailing_stop=params.get("trailing_stop", False),
+            use_ml=params.get("use_ml", False),
+            use_sentiment=params.get("use_sentiment", False),
+            min_confidence=params.get("min_confidence", 0.6)
         )
 
     def _config_to_strategy_params(self, config: StrategyConfig) -> Dict:
         """Extract parameters from StrategyConfig for database storage"""
+        # Build parameters dict from StrategyConfig fields
+        parameters = {
+            "pairs": config.pairs,
+            "timeframe": config.timeframe,
+            "stake_amount": config.stake_amount,
+            "stop_loss": config.stop_loss,
+            "take_profit": config.take_profit,
+            "max_open_trades": config.max_open_trades,
+            "trailing_stop": config.trailing_stop,
+            "use_ml": config.use_ml,
+            "use_sentiment": config.use_sentiment,
+            "min_confidence": config.min_confidence
+        }
+
         return {
             "name": config.name,
-            "type": StrategyType[config.type.upper()] if hasattr(StrategyType, config.type.upper()) else StrategyType.CUSTOM,
-            "description": config.parameters.get("description", ""),
-            "parameters": config.parameters,
+            "type": StrategyType.CUSTOM,  # Default to CUSTOM since type is not in StrategyConfig
+            "description": f"Strategy: {config.name}",
+            "parameters": parameters,
             "is_active": config.enabled
         }
 
