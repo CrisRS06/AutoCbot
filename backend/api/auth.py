@@ -13,6 +13,7 @@ from database.models import User
 from utils.auth import (
     verify_password,
     get_password_hash,
+    validate_password_strength,
     create_access_token,
     create_refresh_token,
     get_current_user,
@@ -87,6 +88,14 @@ async def register(user_data: UserRegister, db: Session = Depends(get_db)):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered"
+        )
+
+    # Validate password strength
+    is_valid, error_message = validate_password_strength(user_data.password)
+    if not is_valid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=error_message
         )
 
     # Create new user with hashed password
@@ -224,6 +233,14 @@ async def change_password(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Current password is incorrect"
+        )
+
+    # Validate new password strength
+    is_valid, error_message = validate_password_strength(new_password)
+    if not is_valid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=error_message
         )
 
     # Update to new password
