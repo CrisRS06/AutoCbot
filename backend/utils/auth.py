@@ -5,8 +5,8 @@ Implements secure password hashing with bcrypt and JWT token generation/validati
 from datetime import datetime, timedelta
 from typing import Optional
 import uuid
+import bcrypt
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
@@ -14,9 +14,6 @@ from sqlalchemy.orm import Session
 from utils.config import settings
 from database.session import get_db
 from database.models import User, TokenBlacklist
-
-# Password hashing with bcrypt
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # JWT Bearer token authentication scheme
 security = HTTPBearer()
@@ -33,20 +30,36 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     Returns:
         True if password matches hash, False otherwise
     """
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        # Encode both the plain password and hash for bcrypt
+        return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+    except Exception:
+        return False
 
 
 def get_password_hash(password: str) -> str:
     """
-    Hash a password using bcrypt
+    Hash a password using bcrypt directly
 
     Args:
         password: Plain text password to hash
 
     Returns:
-        Bcrypt hashed password
+        Bcrypt hashed password as string
     """
-    return pwd_context.hash(password)
+    # Bcrypt has a 72-byte limit, but we handle this in validation
+    # Generate salt and hash the password
+    password_bytes = password.encode('utf-8')
+
+    # Truncate to 72 bytes if necessary (bcrypt limitation)
+    if len(password_bytes) > 72:
+        password_bytes = password_bytes[:72]
+
+    # Hash with auto-generated salt (12 rounds by default)
+    hashed = bcrypt.hashpw(password_bytes, bcrypt.gensalt())
+
+    # Return as string for database storage
+    return hashed.decode('utf-8')
 
 
 def validate_password_strength(password: str) -> tuple[bool, str]:
@@ -55,6 +68,7 @@ def validate_password_strength(password: str) -> tuple[bool, str]:
 
     Requirements:
     - Minimum 8 characters
+    - Maximum 72 characters (bcrypt limit)
     - At least one uppercase letter
     - At least one lowercase letter
     - At least one digit
@@ -68,6 +82,9 @@ def validate_password_strength(password: str) -> tuple[bool, str]:
     """
     if len(password) < 8:
         return False, "Password must be at least 8 characters long"
+
+    if len(password) > 72:
+        return False, "Password must not exceed 72 characters (bcrypt limitation)"
 
     if not any(c.isupper() for c in password):
         return False, "Password must contain at least one uppercase letter"
@@ -180,8 +197,17 @@ async def get_current_user(
     token = credentials.credentials
     payload = verify_token(token)
 
-    user_id: int = payload.get("sub")
-    if user_id is None:
+    user_id_str = payload.get("sub")
+    if user_id_str is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials - no user ID in token"
+        )
+
+    try:
+        user_id: int = int(user_id_str)
+    except (ValueError, TypeError):
+
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication credentials - no user ID in token"

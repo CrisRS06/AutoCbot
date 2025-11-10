@@ -11,7 +11,7 @@ from typing import Dict, List, Optional, Tuple
 from sqlalchemy.orm import Session
 
 from database.models import Strategy, BacktestResult as BacktestResultModel
-from services.market_data import MarketDataService
+from services.market_service import MarketDataService
 from services.technical_analysis import TechnicalAnalysisService
 from utils.metrics import calculate_all_metrics
 
