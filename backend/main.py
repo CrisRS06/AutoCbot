@@ -18,7 +18,9 @@ from services.sentiment import SentimentService
 from services.fundamental import FundamentalService
 from services.websocket_manager import WebSocketManager
 from utils.config import settings
-from middleware.security import SecurityHeadersMiddleware, RateLimitMiddleware, RequestIDMiddleware
+from middleware.security import SecurityHeadersMiddleware, RequestIDMiddleware
+from utils.rate_limit import limiter, rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 # Configure logging
 logging.basicConfig(
@@ -79,6 +81,12 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+# Add SlowAPI state to app (required for rate limiting)
+app.state.limiter = limiter
+
+# Add rate limit exceeded exception handler
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
+
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
@@ -91,7 +99,6 @@ app.add_middleware(
 # Security middleware
 app.add_middleware(RequestIDMiddleware)  # Request ID tracking
 app.add_middleware(SecurityHeadersMiddleware)  # Security headers
-app.add_middleware(RateLimitMiddleware, requests_per_minute=120)  # Rate limiting
 
 # Include routers
 app.include_router(router, prefix="/api/v1")
