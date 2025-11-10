@@ -1,14 +1,26 @@
-# API Keys and Secrets
-.env
-config.json
-user_data/config*.json
+# ============================================
+# AutoCbot .gitignore
+# ============================================
 
-# Python
+# ==================== Secrets ====================
+# API Keys and Secrets (NEVER COMMIT THESE!)
+.env
+.env.*
+!.env.example
+config.json
+*.pem
+*.key
+*.crt
+
+# ==================== Python ====================
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
+
+# Distribution / packaging
 build/
 develop-eggs/
 dist/
@@ -21,74 +33,194 @@ parts/
 sdist/
 var/
 wheels/
+pip-wheel-metadata/
+share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
 MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
 
 # Virtual Environment
 .venv/
 venv/
 ENV/
 env/
+.virtualenv/
 
-# Jupyter Notebook
+# Pytest
+.pytest_cache/
+.coverage
+htmlcov/
+*.cover
+.hypothesis/
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# ==================== Jupyter ====================
 .ipynb_checkpoints
 *.ipynb_checkpoints/
+*.ipynb
 
-# Freqtrade Data
-user_data/data/
-user_data/backtest_results/
-user_data/hyperopt_results/
-user_data/plot/
-user_data/tradesv3.sqlite
-user_data/tradesv3.dryrun.sqlite
-user_data/*.sqlite
-user_data/*.log
+# ==================== Node.js ====================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+.pnpm-debug.log*
 
-# Trained Models (optional - comment out if you want to commit models)
-# user_data/models/*.pkl
-
-# Logs
-*.log
-logs/
-
-# Backups
-backups/
-*.tar.gz
-
-# OS
-.DS_Store
-Thumbs.db
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-repo_gitdir/
-
-# Tax Reports
-tax_report_*.csv
-binance_trades.csv
-
-# Frontend build artifacts
+# ==================== Frontend Build ====================
 frontend/.next/
 frontend/next-env.d.ts
-frontend/node_modules/
+frontend/out/
+frontend/build/
+frontend/dist/
+frontend/.cache/
 
-# Backend user data
+# ==================== Backend Data ====================
+# User data (now in backend/)
+backend/user_data/data/
+backend/user_data/backtest_results/
+backend/user_data/hyperopt_results/
+backend/user_data/plot/
+backend/user_data/notebooks/*.sqlite
+backend/user_data/config*.json
+backend/user_data/*.log
+
+# Trained Models (uncomment to commit models)
+# backend/user_data/models/*.pkl
+
+# Settings and data
+backend/data/
+!backend/data/.gitkeep
 backend/data/user_settings.json
 
-# Database files (SQLite)
+# ==================== Database ====================
+# SQLite databases
 *.db
 *.db-journal
-backend/autocbot.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+backend/autocbot.db*
 
+# ==================== Logs ====================
+*.log
+logs/
+*.log.*
+backend/logs/
+
+# ==================== Backups ====================
+backups/
+*.backup
+*.bak
+*.tar.gz
+*.zip
+
+# ==================== OS Specific ====================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+Desktop.ini
+
+# Linux
+*~
+.directory
+.Trash-*
+
+# ==================== IDEs ====================
+# VSCode
+.vscode/
+!.vscode/settings.json.example
+!.vscode/launch.json.example
+*.code-workspace
+
+# PyCharm
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+.netrwhist
+
+# Emacs
+\#*\#
+.\#*
+*.elc
+auto-save-list
+tramp
+
+# ==================== Testing ====================
 # Test artifacts
 tests/ux/node_modules/
 tests/ux/test-results/
 tests/ux/playwright-report/
 tests/ux/test-results.json
 tests/ux/*.json
+.coverage
+coverage/
+*.cover
+
+# ==================== Temporary Files ====================
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+.#*
+
+# ==================== Tax Reports ====================
+tax_report_*.csv
+binance_trades.csv
+trade_history_*.csv
+
+# ==================== Alembic ====================
+# Keep migrations but ignore temp files
+backend/alembic/*.pyc
+
+# ==================== Docker ====================
+*.dockerignore
+
+# ==================== Misc ====================
+repo_gitdir/
+.vagrant/
+*.sage.py
+
+# ==================== Production ====================
+# Production configs (use .env instead)
+production.ini
+production.cfg
+
+# SSL Certificates
+*.pem
+*.cer
+*.der
+*.crt
+*.p12
+*.pfx
