@@ -75,9 +75,50 @@ class User(Base):
 
     # Relationships
     strategies = relationship("Strategy", back_populates="user", cascade="all, delete-orphan")
+    settings = relationship("UserSettingsModel", back_populates="user", uselist=False, cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<User(id={self.id}, email='{self.email}')>"
+
+
+class UserSettingsModel(Base):
+    """Per-user settings with encrypted sensitive data"""
+    __tablename__ = "user_settings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+
+    # API Keys (ENCRYPTED)
+    binance_api_key_encrypted = Column(Text, nullable=True)
+    binance_secret_encrypted = Column(Text, nullable=True)
+    coingecko_api_key_encrypted = Column(Text, nullable=True)
+    telegram_token_encrypted = Column(Text, nullable=True)
+    telegram_chat_id_encrypted = Column(Text, nullable=True)
+
+    # Trading Parameters
+    default_pairs = Column(String(500), default="BTC/USDT,ETH/USDT,BNB/USDT,SOL/USDT")
+    default_timeframe = Column(String(10), default="5m")
+    max_position_size = Column(Float, default=0.1)  # 10% of portfolio
+    max_open_trades = Column(Integer, default=5)
+
+    # Risk Management
+    default_stoploss = Column(Float, default=-0.05)  # -5%
+    default_takeprofit = Column(Float, default=0.03)  # 3%
+
+    # Feature Flags (per-user)
+    enable_ml_predictions = Column(Boolean, default=True)
+    enable_paper_trading = Column(Boolean, default=True)
+    dry_run = Column(Boolean, default=True)
+
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    user = relationship("User", back_populates="settings")
+
+    def __repr__(self):
+        return f"<UserSettingsModel(user_id={self.user_id})>"
 
 
 class Strategy(Base):
