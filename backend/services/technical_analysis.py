@@ -9,7 +9,7 @@ from typing import Dict, Optional
 import logging
 
 from models.schemas import TechnicalIndicators
-from services.market_data import MarketDataService
+from services.market_service import MarketDataService
 
 logger = logging.getLogger(__name__)
 

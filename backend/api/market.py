@@ -12,7 +12,7 @@ from models.schemas import (
     CandleData,
     TechnicalIndicators
 )
-from services.market_data import MarketDataService
+from services.market_service import MarketDataService
 from services.technical_analysis import TechnicalAnalysisService
 
 router = APIRouter()

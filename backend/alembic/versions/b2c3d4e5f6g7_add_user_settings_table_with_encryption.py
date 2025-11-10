@@ -59,8 +59,7 @@ def upgrade() -> None:
         sa.Column('updated_at', sa.DateTime(timezone=True), onupdate=func.now()),
     )
 
-    # Create index on user_id for fast lookups
-    op.create_index('ix_user_settings_user_id', 'user_settings', ['user_id'], unique=True)
+    # Index on user_id is already created automatically via index=True in column definition
 
 
 def downgrade() -> None:
@@ -69,5 +68,5 @@ def downgrade() -> None:
 
     WARNING: This will delete all per-user settings data!
     """
-    op.drop_index('ix_user_settings_user_id', table_name='user_settings')
+    # Index is dropped automatically when table is dropped
     op.drop_table('user_settings')

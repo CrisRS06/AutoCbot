@@ -41,11 +41,18 @@ def get_password_hash(password: str) -> str:
     Hash a password using bcrypt
 
     Args:
-        password: Plain text password to hash
+        password: Plain text password to hash (will be truncated to 72 bytes if longer)
 
     Returns:
         Bcrypt hashed password
     """
+    # Bcrypt has a 72-byte limit. Truncate if necessary.
+    # UTF-8 encoding can use multiple bytes per character, so we encode first
+    password_bytes = password.encode('utf-8')
+    if len(password_bytes) > 72:
+        # Truncate to 72 bytes, then decode back (may need adjustment)
+        password = password_bytes[:72].decode('utf-8', errors='ignore')
+
     return pwd_context.hash(password)
 
 
@@ -55,6 +62,7 @@ def validate_password_strength(password: str) -> tuple[bool, str]:
 
     Requirements:
     - Minimum 8 characters
+    - Maximum 72 characters (bcrypt limit)
     - At least one uppercase letter
     - At least one lowercase letter
     - At least one digit
@@ -68,6 +76,9 @@ def validate_password_strength(password: str) -> tuple[bool, str]:
     """
     if len(password) < 8:
         return False, "Password must be at least 8 characters long"
+
+    if len(password) > 72:
+        return False, "Password must not exceed 72 characters (bcrypt limitation)"
 
     if not any(c.isupper() for c in password):
         return False, "Password must contain at least one uppercase letter"

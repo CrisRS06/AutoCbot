@@ -13,7 +13,7 @@ from typing import Dict, List
 import asyncio
 
 from api import router
-from services.market_data import MarketDataService
+from services.market_service import MarketDataService
 from services.sentiment import SentimentService
 from services.fundamental import FundamentalService
 from services.websocket_manager import WebSocketManager
